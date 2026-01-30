@@ -1056,13 +1056,88 @@
 
 
 
+        /* Visibility Controls */
+        .visibility-controls {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(71, 85, 105, 0.4);
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .controls-title {
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .controls-hint {
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+
+        .toggle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-item:hover {
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .toggle-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        .toggle-label {
+            color: #cbd5e1;
+            font-size: 0.8rem;
+            user-select: none;
+        }
+
+        .toggle-item:has(input:not(:checked)) .toggle-label {
+            color: #64748b;
+            text-decoration: line-through;
+        }
+
+        /* Hidden sections */
+        .section-hidden {
+            display: none !important;
+        }
+
         /* Print styles */
         @media print {
             body {
                 background: #fff;
             }
 
-            .input-section, .button-row, h1 {
+            .input-section, .button-row, h1, .visibility-controls {
                 display: none !important;
             }
 
@@ -1266,6 +1341,46 @@ Example:
         </div>
 
         <div id="reportSection" class="report-section">
+            <div class="visibility-controls">
+                <div class="controls-header">
+                    <span class="controls-title">Report Sections</span>
+                    <span class="controls-hint">Toggle sections to show/hide in report</span>
+                </div>
+                <div class="toggle-grid">
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-metrics" checked onchange="toggleSection('metrics')">
+                        <span class="toggle-label">Case Metrics</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-case-donut" checked onchange="toggleSection('case-donut')">
+                        <span class="toggle-label">Case Classification Chart</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-case-bar" checked onchange="toggleSection('case-bar')">
+                        <span class="toggle-label">Case Volume Chart</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-class-breakdown" checked onchange="toggleSection('class-breakdown')">
+                        <span class="toggle-label">Classification Breakdown</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-esc-donut" checked onchange="toggleSection('esc-donut')">
+                        <span class="toggle-label">Escalation Chart</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-esc-breakdown" checked onchange="toggleSection('esc-breakdown')">
+                        <span class="toggle-label">Escalation Breakdown</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-esc-details" checked onchange="toggleSection('esc-details')">
+                        <span class="toggle-label">Escalation Details</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-summary" checked onchange="toggleSection('summary')">
+                        <span class="toggle-label">Analyst Notes</span>
+                    </label>
+                </div>
+            </div>
             <div class="report-output" id="reportOutput"></div>
         </div>
     </div>
@@ -1924,7 +2039,7 @@ CONCLUSION:
             }
 
             const summaryHTML = summaryNotes ? `
-                <div class="summary-section">
+                <div class="summary-section" data-section="summary">
                     <h4>Analyst Notes & Recommendations</h4>
                     <p>${summaryNotes.replace(/\n/g, '<br>')}</p>
                 </div>
@@ -1987,35 +2102,37 @@ CONCLUSION:
                     <div class="client-name">${clientName}</div>
                 </div>
 
-                <div class="metrics-grid dynamic">
+                <div class="metrics-grid dynamic" data-section="metrics">
                     ${metricsHTML}
                 </div>
 
                 <div class="visualization-section">
-                    <div class="chart-container">
+                    <div class="chart-container" data-section="case-donut">
                         <div class="chart-title">Case Classification Distribution</div>
                         ${generateDonutChart(totalCases, classTP, classBP, classFP, classUD)}
                     </div>
-                    <div class="chart-container">
+                    <div class="chart-container" data-section="case-bar">
                         <div class="chart-title">Case Volume Breakdown</div>
                         ${generateBarChart(totalCases, totalEscalated, classTP, classBP, classFP, classUD)}
                     </div>
                 </div>
 
-                ${breakdownHTML}
+                <div data-section="class-breakdown">${breakdownHTML}</div>
 
                 ${escalations.length > 0 ? `
-                <div style="margin-bottom: 40px;">
+                <div style="margin-bottom: 40px;" data-section="esc-donut">
                     <h3 class="report-section-title">Escalation Classification Distribution</h3>
                     <div class="chart-container" style="margin-bottom: 24px;">
                         ${generateEscalationDonutChart(escalations)}
                     </div>
+                </div>
+                <div style="margin-bottom: 40px;" data-section="esc-breakdown">
                     <h3 class="report-section-title">Escalation Classification Breakdown</h3>
                     ${generateEscalationBreakdownGrid(escalations)}
                 </div>
                 ` : ''}
 
-                <div class="escalations-container">
+                <div class="escalations-container" data-section="esc-details">
                     <h3 class="report-section-title">Escalation Details</h3>
                     ${escalationCards}
                 </div>
@@ -2071,6 +2188,18 @@ CONCLUSION:
         // Add validation check for escalation vs TP count
         document.getElementById('totalEscalated').addEventListener('input', validateEscalationCount);
         document.getElementById('classTP').addEventListener('input', validateEscalationCount);
+
+        function toggleSection(sectionId) {
+            const section = document.querySelector(`[data-section="${sectionId}"]`);
+            const checkbox = document.getElementById(`toggle-${sectionId}`);
+            if (section) {
+                if (checkbox.checked) {
+                    section.classList.remove('section-hidden');
+                } else {
+                    section.classList.add('section-hidden');
+                }
+            }
+        }
 
         function validateEscalationCount() {
             const escalated = parseInt(document.getElementById('totalEscalated').value) || 0;
