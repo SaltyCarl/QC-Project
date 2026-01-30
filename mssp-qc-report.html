@@ -311,6 +311,65 @@
             margin-top: 20px;
         }
 
+        /* Drag and Drop */
+        .drag-handle {
+            cursor: grab;
+            color: #64748b;
+            font-size: 1.2rem;
+            padding: 4px 8px;
+            user-select: none;
+        }
+
+        .drag-handle:hover {
+            color: #94a3b8;
+        }
+
+        .escalation-entry.dragging {
+            opacity: 0.5;
+        }
+
+        /* Entry Actions */
+        .entry-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .btn-icon {
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.4);
+            color: #94a3b8;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-icon:hover {
+            background: rgba(59, 130, 246, 0.3);
+            border-color: #3b82f6;
+            color: #e2e8f0;
+        }
+
+        /* Collapsed Escalation Entry */
+        .escalation-entry.collapsed .entry-body {
+            display: none;
+        }
+
+        .escalation-entry.collapsed .entry-header .btn-icon:first-child {
+            transform: rotate(-90deg);
+        }
+
+        .entry-body {
+            transition: all 0.2s ease;
+        }
+
         .escalation-entry {
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(71, 85, 105, 0.3);
@@ -1319,8 +1378,13 @@ Undetermined,,36"></textarea>
 
             <h3 class="section-title">Escalation Details <span id="escalationCounter" style="color: #60a5fa; font-weight: 400; font-size: 0.75rem; letter-spacing: 0;"></span></h3>
             <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 16px;">Add one entry for each incident escalated to the client. These should all be TruePositive classifications.</p>
+            <div class="escalation-toolbar" style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-small" onclick="addEscalation()">+ Add Escalation</button>
+                <button class="btn btn-secondary btn-small" onclick="importEscalationsFromCSV()">Import from CSV</button>
+                <button class="btn btn-secondary btn-small" onclick="collapseAllEscalations()">Collapse All</button>
+                <button class="btn btn-secondary btn-small" onclick="expandAllEscalations()">Expand All</button>
+            </div>
             <div id="escalationEntries" class="escalation-entries"></div>
-            <button class="btn btn-secondary" onclick="addEscalation()">+ Add Escalation</button>
 
             <h3 class="section-title" style="margin-top: 30px;">Executive Summary</h3>
             <div class="input-group">
@@ -1334,9 +1398,18 @@ Example:
             </div>
 
             <div class="button-row">
-                <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
-                <button class="btn btn-secondary" onclick="printReport()">Print / Export PDF</button>
+                <button class="btn btn-primary" onclick="if(showValidationResults()) generateReport()">Generate Report</button>
+                <button class="btn btn-secondary" onclick="printReport()">Print / PDF</button>
+                <button class="btn btn-secondary" onclick="exportAsHTML()">Export HTML</button>
+                <button class="btn btn-secondary" onclick="saveToJSON()">Save JSON</button>
+                <button class="btn btn-secondary" onclick="loadFromJSON()">Load JSON</button>
                 <button class="btn btn-secondary" onclick="clearForm()">Clear All</button>
+            </div>
+            <div class="keyboard-hints" style="margin-top: 12px; font-size: 0.7rem; color: #64748b;">
+                <span title="Add Escalation">Ctrl+Enter: Add</span> •
+                <span title="Generate Report">Ctrl+G: Generate</span> •
+                <span title="Save to JSON">Ctrl+S: Save</span> •
+                <span title="Load from JSON">Ctrl+O: Load</span>
             </div>
         </div>
 
@@ -1374,6 +1447,10 @@ Example:
                     <label class="toggle-item">
                         <input type="checkbox" id="toggle-esc-details" checked onchange="toggleSection('esc-details')">
                         <span class="toggle-label">Escalation Details</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-severity-chart" checked onchange="toggleSection('severity-chart')">
+                        <span class="toggle-label">Severity Chart</span>
                     </label>
                     <label class="toggle-item">
                         <input type="checkbox" id="toggle-summary" checked onchange="toggleSection('summary')">
@@ -1612,72 +1689,79 @@ Example:
             const entry = document.createElement('div');
             entry.className = 'escalation-entry';
             entry.id = `escalation-${escalationCount}`;
+            entry.draggable = true;
             entry.innerHTML = `
                 <div class="entry-header">
+                    <span class="drag-handle" title="Drag to reorder">⠿</span>
                     <div class="entry-number">${escalationCount}</div>
-                    <button class="btn btn-danger" onclick="removeEscalation(${escalationCount})">Remove</button>
-                </div>
-                <div class="input-grid">
-                    <div class="input-group">
-                        <label>Service Ticket</label>
-                        <input type="text" class="esc-id" placeholder="Sentinel Incident ID">
-                    </div>
-                    <div class="input-group">
-                        <label>Incident Number</label>
-                        <input type="text" class="esc-incident-num" placeholder="e.g., INC0012345">
-                    </div>
-                    <div class="input-group">
-                        <label>Incident Date</label>
-                        <input type="date" class="esc-date" value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div class="input-group" style="grid-column: 1 / -1;">
-                        <label>Incident Title</label>
-                        <input type="text" class="esc-title" placeholder="e.g., Suspicious PowerShell execution on WORKSTATION-01">
+                    <div class="entry-actions">
+                        <button type="button" class="btn-icon" onclick="toggleEscalationCollapse(${escalationCount})" title="Collapse/Expand">▼</button>
+                        <button type="button" class="btn-icon" onclick="duplicateEscalation(${escalationCount})" title="Duplicate">⧉</button>
+                        <button class="btn btn-danger" onclick="removeEscalation(${escalationCount})">Remove</button>
                     </div>
                 </div>
-                <div class="input-grid">
-                    <div class="input-group">
-                        <label>Classification (Sentinel)</label>
-                        <select class="esc-class">
-                            <option value="TruePositive">TruePositive</option>
-                            <option value="BenignPositive">BenignPositive</option>
-                            <option value="FalsePositive">FalsePositive</option>
-                            <option value="Undetermined">Undetermined</option>
-                        </select>
+                <div class="entry-body">
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Service Ticket</label>
+                            <input type="text" class="esc-id" placeholder="Sentinel Incident ID">
+                        </div>
+                        <div class="input-group">
+                            <label>Incident Number</label>
+                            <input type="text" class="esc-incident-num" placeholder="e.g., INC0012345">
+                        </div>
+                        <div class="input-group">
+                            <label>Incident Date</label>
+                            <input type="date" class="esc-date" value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / -1;">
+                            <label>Incident Title</label>
+                            <input type="text" class="esc-title" placeholder="e.g., Suspicious PowerShell execution on WORKSTATION-01">
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Threat Type</label>
-                        <input type="text" class="esc-threat" placeholder="e.g., Credential Access, Phishing">
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Classification (Sentinel)</label>
+                            <select class="esc-class">
+                                <option value="TruePositive">TruePositive</option>
+                                <option value="BenignPositive">BenignPositive</option>
+                                <option value="FalsePositive">FalsePositive</option>
+                                <option value="Undetermined">Undetermined</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Threat Type</label>
+                            <input type="text" class="esc-threat" placeholder="e.g., Credential Access, Phishing">
+                        </div>
+                        <div class="input-group">
+                            <label>Severity</label>
+                            <select class="esc-severity">
+                                <option value="High">High</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Low">Low</option>
+                                <option value="Informational">Informational</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Client Impact</label>
+                            <select class="esc-impact">
+                                <option value="No Impact - Contained">No Impact - Contained</option>
+                                <option value="No Impact - False Positive">No Impact - False Positive</option>
+                                <option value="Limited Impact - Remediated">Limited Impact - Remediated</option>
+                                <option value="Significant Impact - Remediated">Significant Impact - Remediated</option>
+                                <option value="Ongoing - Client Action Required">Ongoing - Client Action Required</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Severity</label>
-                        <select class="esc-severity">
-                            <option value="High">High</option>
-                            <option value="Medium" selected>Medium</option>
-                            <option value="Low">Low</option>
-                            <option value="Informational">Informational</option>
-                        </select>
+                    <div class="input-grid">
+                        <div class="input-group full-width">
+                            <label>Affected Assets (comma-separated)</label>
+                            <input type="text" class="esc-assets" placeholder="e.g., WKS-001, user@domain.com, 10.0.0.5">
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Client Impact</label>
-                        <select class="esc-impact">
-                            <option value="No Impact - Contained">No Impact - Contained</option>
-                            <option value="No Impact - False Positive">No Impact - False Positive</option>
-                            <option value="Limited Impact - Remediated">Limited Impact - Remediated</option>
-                            <option value="Significant Impact - Remediated">Significant Impact - Remediated</option>
-                            <option value="Ongoing - Client Action Required">Ongoing - Client Action Required</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="input-grid">
                     <div class="input-group full-width">
-                        <label>Affected Assets (comma-separated)</label>
-                        <input type="text" class="esc-assets" placeholder="e.g., WKS-001, user@domain.com, 10.0.0.5">
-                    </div>
-                </div>
-                <div class="input-group full-width">
-                    <label>Actions Taken / Closure Notes</label>
-                    <textarea class="esc-action large" placeholder="Detail the investigation and response actions...
+                        <label>Actions Taken / Closure Notes</label>
+                        <textarea class="esc-action large" placeholder="Detail the investigation and response actions...
 
 INVESTIGATION:
 - What was analyzed, data sources reviewed
@@ -1691,10 +1775,12 @@ RESPONSE ACTIONS:
 
 CONCLUSION:
 - Final determination"></textarea>
+                    </div>
                 </div>
             `;
             container.appendChild(entry);
             renumberEscalations();
+            attachAutoSaveListeners();
         }
 
         function removeEscalation(id) {
@@ -1944,6 +2030,47 @@ CONCLUSION:
             `;
         }
 
+        function generateSeverityChart(escalations) {
+            const total = escalations.length;
+            if (total === 0) return '';
+
+            const counts = { High: 0, Medium: 0, Low: 0, Informational: 0 };
+            escalations.forEach(e => { counts[e.severity] = (counts[e.severity] || 0) + 1; });
+
+            const colors = { High: '#dc2626', Medium: '#f59e0b', Low: '#3b82f6', Informational: '#64748b' };
+            const maxCount = Math.max(...Object.values(counts), 1);
+
+            const bars = Object.entries(counts)
+                .filter(([key, val]) => val > 0)
+                .map(([key, val]) => ({
+                    label: key,
+                    value: val,
+                    width: (val / maxCount) * 100,
+                    color: colors[key]
+                }));
+
+            if (bars.length === 0) return '';
+
+            return `
+                <div class="chart-container" style="margin-bottom: 24px;">
+                    <div class="chart-title">Escalation Severity Distribution</div>
+                    <div class="bar-chart">
+                        ${bars.map(bar => `
+                            <div class="bar-item">
+                                <div class="bar-label">${bar.label}</div>
+                                <div class="bar-track">
+                                    <div class="bar-fill" style="width: ${Math.max(bar.width, 5)}%; background: ${bar.color};">
+                                        ${bar.width > 15 ? `<span class="bar-value">${bar.value}</span>` : ''}
+                                    </div>
+                                    ${bar.width <= 15 ? `<span class="bar-value outside">${bar.value}</span>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
         function generateReport() {
             const clientName = document.getElementById('clientName').value || 'Client';
             const reportPeriod = formatDateRange();
@@ -2130,6 +2257,10 @@ CONCLUSION:
                     <h3 class="report-section-title">Escalation Classification Breakdown</h3>
                     ${generateEscalationBreakdownGrid(escalations)}
                 </div>
+                <div style="margin-bottom: 40px;" data-section="severity-chart">
+                    <h3 class="report-section-title">Escalation Severity Distribution</h3>
+                    ${generateSeverityChart(escalations)}
+                </div>
                 ` : ''}
 
                 <div class="escalations-container" data-section="esc-details">
@@ -2223,6 +2354,539 @@ CONCLUSION:
                 hint.innerHTML = `<span style="font-size: 1rem;">✓</span> Counts match`;
                 escalatedInput.parentNode.appendChild(hint);
             }
+        }
+
+        // ==================== AUTO-SAVE TO LOCALSTORAGE ====================
+        const STORAGE_KEY = 'mssp-qc-report-data';
+        let autoSaveTimeout;
+
+        function getFormData() {
+            const escalationEntries = [];
+            document.querySelectorAll('.escalation-entry').forEach(entry => {
+                escalationEntries.push({
+                    id: entry.querySelector('.esc-id')?.value || '',
+                    incidentNum: entry.querySelector('.esc-incident-num')?.value || '',
+                    date: entry.querySelector('.esc-date')?.value || '',
+                    title: entry.querySelector('.esc-title')?.value || '',
+                    classification: entry.querySelector('.esc-class')?.value || 'TruePositive',
+                    threat: entry.querySelector('.esc-threat')?.value || '',
+                    severity: entry.querySelector('.esc-severity')?.value || 'Medium',
+                    assets: entry.querySelector('.esc-assets')?.value || '',
+                    impact: entry.querySelector('.esc-impact')?.value || '',
+                    action: entry.querySelector('.esc-action')?.value || '',
+                    collapsed: entry.classList.contains('collapsed')
+                });
+            });
+
+            return {
+                clientName: document.getElementById('clientName').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                environment: document.getElementById('environment').value,
+                reportType: document.getElementById('reportType').value,
+                totalCases: document.getElementById('totalCases').value,
+                totalEscalated: document.getElementById('totalEscalated').value,
+                classTP: document.getElementById('classTP').value,
+                classBP: document.getElementById('classBP').value,
+                classFP: document.getElementById('classFP').value,
+                classUD: document.getElementById('classUD').value,
+                csvInput: document.getElementById('csvInput').value,
+                summaryNotes: document.getElementById('summaryNotes').value,
+                escalations: escalationEntries,
+                savedAt: new Date().toISOString()
+            };
+        }
+
+        function autoSave() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                const data = getFormData();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                showAutoSaveIndicator();
+            }, 1000);
+        }
+
+        function showAutoSaveIndicator() {
+            let indicator = document.getElementById('autoSaveIndicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'autoSaveIndicator';
+                indicator.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: rgba(16, 185, 129, 0.9); color: white; padding: 8px 16px; border-radius: 4px; font-size: 0.8rem; z-index: 1000; transition: opacity 0.3s;';
+                document.body.appendChild(indicator);
+            }
+            indicator.textContent = '✓ Auto-saved';
+            indicator.style.opacity = '1';
+            setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) return false;
+
+            try {
+                const data = JSON.parse(saved);
+                return loadFormData(data);
+            } catch (e) {
+                console.error('Failed to load saved data:', e);
+                return false;
+            }
+        }
+
+        function loadFormData(data) {
+            if (!data) return false;
+
+            document.getElementById('clientName').value = data.clientName || '';
+            document.getElementById('startDate').value = data.startDate || '';
+            document.getElementById('endDate').value = data.endDate || '';
+            document.getElementById('environment').value = data.environment || 'Azure Sentinel';
+            document.getElementById('reportType').value = data.reportType || 'Weekly QC Review';
+            document.getElementById('totalCases').value = data.totalCases || '';
+            document.getElementById('totalEscalated').value = data.totalEscalated || '';
+            document.getElementById('classTP').value = data.classTP || '';
+            document.getElementById('classBP').value = data.classBP || '';
+            document.getElementById('classFP').value = data.classFP || '';
+            document.getElementById('classUD').value = data.classUD || '';
+            document.getElementById('csvInput').value = data.csvInput || '';
+            document.getElementById('summaryNotes').value = data.summaryNotes || '';
+
+            // Load escalations
+            document.getElementById('escalationEntries').innerHTML = '';
+            escalationCount = 0;
+            if (data.escalations && data.escalations.length > 0) {
+                data.escalations.forEach(esc => {
+                    addEscalation();
+                    const entry = document.querySelector('.escalation-entry:last-child');
+                    if (entry) {
+                        entry.querySelector('.esc-id').value = esc.id || '';
+                        entry.querySelector('.esc-incident-num').value = esc.incidentNum || '';
+                        entry.querySelector('.esc-date').value = esc.date || '';
+                        entry.querySelector('.esc-title').value = esc.title || '';
+                        entry.querySelector('.esc-class').value = esc.classification || 'TruePositive';
+                        entry.querySelector('.esc-threat').value = esc.threat || '';
+                        entry.querySelector('.esc-severity').value = esc.severity || 'Medium';
+                        entry.querySelector('.esc-assets').value = esc.assets || '';
+                        entry.querySelector('.esc-impact').value = esc.impact || '';
+                        entry.querySelector('.esc-action').value = esc.action || '';
+                        if (esc.collapsed) entry.classList.add('collapsed');
+                    }
+                });
+            } else {
+                addEscalation();
+            }
+            renumberEscalations();
+            return true;
+        }
+
+        // ==================== SAVE/LOAD JSON FILE ====================
+        function saveToJSON() {
+            const data = getFormData();
+            const clientName = data.clientName || 'report';
+            const dateStr = new Date().toISOString().split('T')[0];
+            const filename = `qc-report-${clientName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${dateStr}.json`;
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadFromJSON() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            loadFormData(data);
+                            showNotification('Report loaded successfully', 'success');
+                        } catch (err) {
+                            showNotification('Failed to load file: Invalid JSON', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 4px; font-size: 0.85rem; z-index: 1000; transition: opacity 0.3s; ${type === 'success' ? 'background: rgba(16, 185, 129, 0.9); color: white;' : type === 'error' ? 'background: rgba(239, 68, 68, 0.9); color: white;' : 'background: rgba(245, 158, 11, 0.9); color: white;'}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => { notification.style.opacity = '0'; setTimeout(() => notification.remove(), 300); }, 3000);
+        }
+
+        // ==================== DUPLICATE ESCALATION ====================
+        function duplicateEscalation(id) {
+            const sourceEntry = document.getElementById(`escalation-${id}`);
+            if (!sourceEntry) return;
+
+            const sourceData = {
+                id: sourceEntry.querySelector('.esc-id').value,
+                incidentNum: sourceEntry.querySelector('.esc-incident-num').value,
+                date: sourceEntry.querySelector('.esc-date').value,
+                title: sourceEntry.querySelector('.esc-title').value,
+                classification: sourceEntry.querySelector('.esc-class').value,
+                threat: sourceEntry.querySelector('.esc-threat').value,
+                severity: sourceEntry.querySelector('.esc-severity').value,
+                assets: sourceEntry.querySelector('.esc-assets').value,
+                impact: sourceEntry.querySelector('.esc-impact').value,
+                action: sourceEntry.querySelector('.esc-action').value
+            };
+
+            addEscalation();
+            const newEntry = document.querySelector('.escalation-entry:last-child');
+            if (newEntry) {
+                newEntry.querySelector('.esc-id').value = sourceData.id;
+                newEntry.querySelector('.esc-incident-num').value = sourceData.incidentNum;
+                newEntry.querySelector('.esc-date').value = sourceData.date;
+                newEntry.querySelector('.esc-title').value = sourceData.title;
+                newEntry.querySelector('.esc-class').value = sourceData.classification;
+                newEntry.querySelector('.esc-threat').value = sourceData.threat;
+                newEntry.querySelector('.esc-severity').value = sourceData.severity;
+                newEntry.querySelector('.esc-assets').value = sourceData.assets;
+                newEntry.querySelector('.esc-impact').value = sourceData.impact;
+                newEntry.querySelector('.esc-action').value = sourceData.action;
+            }
+            autoSave();
+        }
+
+        // ==================== COLLAPSE/EXPAND ESCALATIONS ====================
+        function toggleEscalationCollapse(id) {
+            const entry = document.getElementById(`escalation-${id}`);
+            if (entry) {
+                entry.classList.toggle('collapsed');
+                autoSave();
+            }
+        }
+
+        function collapseAllEscalations() {
+            document.querySelectorAll('.escalation-entry').forEach(entry => entry.classList.add('collapsed'));
+            autoSave();
+        }
+
+        function expandAllEscalations() {
+            document.querySelectorAll('.escalation-entry').forEach(entry => entry.classList.remove('collapsed'));
+            autoSave();
+        }
+
+        // ==================== VALIDATION ====================
+        function validateForm() {
+            const errors = [];
+            const warnings = [];
+
+            // Required fields
+            const clientName = document.getElementById('clientName').value.trim();
+            if (!clientName) errors.push('Client Name is required');
+
+            // Check escalations
+            const escalations = document.querySelectorAll('.escalation-entry');
+            const ticketIds = [];
+            const startDate = new Date(document.getElementById('startDate').value);
+            const endDate = new Date(document.getElementById('endDate').value);
+
+            escalations.forEach((entry, idx) => {
+                const ticketId = entry.querySelector('.esc-id').value.trim();
+                const escDate = entry.querySelector('.esc-date').value;
+
+                // Check for missing ticket ID
+                if (!ticketId || ticketId === 'N/A') {
+                    warnings.push(`Escalation #${idx + 1}: Missing Service Ticket ID`);
+                }
+
+                // Check for duplicates
+                if (ticketId && ticketId !== 'N/A') {
+                    if (ticketIds.includes(ticketId)) {
+                        warnings.push(`Duplicate ticket ID found: ${ticketId}`);
+                    }
+                    ticketIds.push(ticketId);
+                }
+
+                // Check date range
+                if (escDate) {
+                    const d = new Date(escDate);
+                    if (d < startDate || d > endDate) {
+                        warnings.push(`Escalation #${idx + 1}: Date (${escDate}) outside reporting period`);
+                    }
+                }
+            });
+
+            return { errors, warnings, isValid: errors.length === 0 };
+        }
+
+        function showValidationResults() {
+            const { errors, warnings, isValid } = validateForm();
+
+            // Remove existing validation messages
+            document.querySelectorAll('.validation-message').forEach(el => el.remove());
+
+            if (errors.length > 0 || warnings.length > 0) {
+                const container = document.createElement('div');
+                container.className = 'validation-message';
+                container.style.cssText = 'background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(71, 85, 105, 0.4); border-radius: 6px; padding: 16px; margin-bottom: 20px;';
+
+                let html = '';
+                if (errors.length > 0) {
+                    html += `<div style="color: #ef4444; margin-bottom: 8px; font-weight: 600;">Errors:</div><ul style="color: #fca5a5; margin: 0 0 12px 20px; font-size: 0.85rem;">`;
+                    errors.forEach(e => html += `<li>${e}</li>`);
+                    html += '</ul>';
+                }
+                if (warnings.length > 0) {
+                    html += `<div style="color: #f59e0b; margin-bottom: 8px; font-weight: 600;">Warnings:</div><ul style="color: #fcd34d; margin: 0 0 0 20px; font-size: 0.85rem;">`;
+                    warnings.forEach(w => html += `<li>${w}</li>`);
+                    html += '</ul>';
+                }
+                container.innerHTML = html;
+
+                const buttonRow = document.querySelector('.button-row');
+                buttonRow.parentNode.insertBefore(container, buttonRow);
+            }
+
+            return isValid;
+        }
+
+        // ==================== BULK IMPORT ESCALATIONS FROM CSV ====================
+        function importEscalationsFromCSV() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        parseEscalationCSV(e.target.result);
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        function parseEscalationCSV(csvText) {
+            try {
+                const lines = csvText.split('\n').map(line => line.trim()).filter(line => line);
+                if (lines.length < 2) {
+                    showNotification('CSV must have header row and at least one data row', 'error');
+                    return;
+                }
+
+                const delimiter = lines[0].includes('\t') ? '\t' : ',';
+                const headers = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, '').toLowerCase());
+
+                // Map common header names
+                const headerMap = {
+                    'serviceid': 'id', 'ticketid': 'id', 'ticket': 'id', 'service ticket': 'id', 'incident id': 'id',
+                    'incidentnumber': 'incidentNum', 'incident number': 'incidentNum', 'inc': 'incidentNum',
+                    'date': 'date', 'incident date': 'date',
+                    'title': 'title', 'incident title': 'title', 'name': 'title',
+                    'classification': 'classification', 'class': 'classification',
+                    'threat': 'threat', 'threat type': 'threat', 'threattype': 'threat',
+                    'severity': 'severity',
+                    'assets': 'assets', 'affected assets': 'assets', 'affectedassets': 'assets',
+                    'impact': 'impact', 'client impact': 'impact',
+                    'action': 'action', 'actions': 'action', 'notes': 'action', 'closure notes': 'action'
+                };
+
+                const colMap = {};
+                headers.forEach((h, i) => {
+                    const normalized = h.replace(/[^a-z0-9]/g, ' ').trim();
+                    for (const [key, val] of Object.entries(headerMap)) {
+                        if (normalized.includes(key) || key.includes(normalized)) {
+                            colMap[val] = i;
+                            break;
+                        }
+                    }
+                });
+
+                let importedCount = 0;
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(delimiter).map(c => c.trim().replace(/"/g, ''));
+
+                    addEscalation();
+                    const entry = document.querySelector('.escalation-entry:last-child');
+                    if (entry) {
+                        if (colMap.id !== undefined) entry.querySelector('.esc-id').value = cols[colMap.id] || '';
+                        if (colMap.incidentNum !== undefined) entry.querySelector('.esc-incident-num').value = cols[colMap.incidentNum] || '';
+                        if (colMap.date !== undefined) entry.querySelector('.esc-date').value = cols[colMap.date] || '';
+                        if (colMap.title !== undefined) entry.querySelector('.esc-title').value = cols[colMap.title] || '';
+                        if (colMap.classification !== undefined) {
+                            const classVal = cols[colMap.classification] || '';
+                            if (['TruePositive', 'BenignPositive', 'FalsePositive', 'Undetermined'].includes(classVal)) {
+                                entry.querySelector('.esc-class').value = classVal;
+                            }
+                        }
+                        if (colMap.threat !== undefined) entry.querySelector('.esc-threat').value = cols[colMap.threat] || '';
+                        if (colMap.severity !== undefined) {
+                            const sevVal = cols[colMap.severity] || '';
+                            if (['High', 'Medium', 'Low', 'Informational'].includes(sevVal)) {
+                                entry.querySelector('.esc-severity').value = sevVal;
+                            }
+                        }
+                        if (colMap.assets !== undefined) entry.querySelector('.esc-assets').value = cols[colMap.assets] || '';
+                        if (colMap.impact !== undefined) entry.querySelector('.esc-impact').value = cols[colMap.impact] || '';
+                        if (colMap.action !== undefined) entry.querySelector('.esc-action').value = cols[colMap.action] || '';
+                        importedCount++;
+                    }
+                }
+
+                renumberEscalations();
+                autoSave();
+                showNotification(`Imported ${importedCount} escalations`, 'success');
+            } catch (err) {
+                showNotification('Failed to parse CSV: ' + err.message, 'error');
+            }
+        }
+
+        // ==================== EXPORT AS STANDALONE HTML ====================
+        function exportAsHTML() {
+            if (!document.getElementById('reportSection').classList.contains('visible')) {
+                generateReport();
+            }
+
+            const reportContent = document.getElementById('reportOutput').innerHTML;
+            const styles = document.querySelector('style').textContent;
+
+            const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QC Report - ${document.getElementById('clientName').value || 'Report'}</title>
+    <style>
+        body { font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 40px; background: #f8fafc; }
+        .report-output { background: #ffffff; color: #0f172a; border-radius: 2px; padding: 60px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); max-width: 1200px; margin: 0 auto; }
+        ${styles.split('/* Print styles */')[0]}
+    </style>
+</head>
+<body>
+    <div class="report-output">${reportContent}</div>
+</body>
+</html>`;
+
+            const clientName = document.getElementById('clientName').value || 'report';
+            const dateStr = new Date().toISOString().split('T')[0];
+            const filename = `qc-report-${clientName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${dateStr}.html`;
+
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ==================== KEYBOARD SHORTCUTS ====================
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+Enter: Add escalation
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                addEscalation();
+            }
+            // Ctrl+G: Generate report
+            if (e.ctrlKey && e.key === 'g') {
+                e.preventDefault();
+                generateReport();
+            }
+            // Ctrl+P: Print (let default behavior handle it, but generate first)
+            if (e.ctrlKey && e.key === 'p') {
+                if (!document.getElementById('reportSection').classList.contains('visible')) {
+                    e.preventDefault();
+                    generateReport();
+                    setTimeout(() => window.print(), 100);
+                }
+            }
+            // Ctrl+S: Save to JSON
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveToJSON();
+            }
+            // Ctrl+O: Load from JSON
+            if (e.ctrlKey && e.key === 'o') {
+                e.preventDefault();
+                loadFromJSON();
+            }
+        });
+
+        // ==================== DRAG AND DROP REORDER ====================
+        let draggedEntry = null;
+
+        function initDragAndDrop() {
+            const container = document.getElementById('escalationEntries');
+
+            container.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('escalation-entry')) {
+                    draggedEntry = e.target;
+                    e.target.style.opacity = '0.5';
+                }
+            });
+
+            container.addEventListener('dragend', (e) => {
+                if (e.target.classList.contains('escalation-entry')) {
+                    e.target.style.opacity = '1';
+                    draggedEntry = null;
+                }
+            });
+
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(container, e.clientY);
+                if (draggedEntry) {
+                    if (afterElement == null) {
+                        container.appendChild(draggedEntry);
+                    } else {
+                        container.insertBefore(draggedEntry, afterElement);
+                    }
+                }
+            });
+
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+                renumberEscalations();
+                autoSave();
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.escalation-entry:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // ==================== ATTACH AUTO-SAVE LISTENERS ====================
+        function attachAutoSaveListeners() {
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('input', autoSave);
+                input.addEventListener('change', autoSave);
+            });
+        }
+
+        // Initialize drag and drop
+        initDragAndDrop();
+
+        // Attach auto-save to existing fields
+        attachAutoSaveListeners();
+
+        // Load saved data on page load
+        if (loadFromStorage()) {
+            showNotification('Previous session restored', 'success');
         }
     </script>
 </body>
