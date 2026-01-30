@@ -304,7 +304,7 @@
             letter-spacing: 0.1em;
         }
 
-        /* Hero Metric */
+        /* Hero Metric - Consolidated */
         .hero-section {
             display: flex;
             justify-content: center;
@@ -313,7 +313,7 @@
 
         .hero-metric {
             text-align: center;
-            padding: 40px 60px;
+            padding: 40px 80px;
             background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
             border-radius: 4px;
             border: 1px solid #334155;
@@ -339,6 +339,37 @@
             font-size: 0.85rem;
             color: #64748b;
             margin-top: 8px;
+        }
+
+        /* Inline classification badges for single-type scenarios */
+        .hero-classification {
+            margin-top: 16px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .hero-badge.tp { background: rgba(220, 38, 38, 0.2); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.4); }
+        .hero-badge.bp { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .hero-badge.fp { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .hero-badge.ud { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.4); }
+
+        .hero-badge-count {
+            font-weight: 700;
+            font-size: 1rem;
         }
 
         /* Classification Breakdown - Visual Grid */
@@ -1086,6 +1117,19 @@
                 </div>
             ` : '';
 
+            // Count unique classification types
+            const classificationCounts = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
+            escalations.forEach(e => { classificationCounts[e.classification] = (classificationCounts[e.classification] || 0) + 1; });
+            const uniqueClassifications = Object.entries(classificationCounts).filter(([k, v]) => v > 0);
+            const hasMultipleTypes = uniqueClassifications.length > 1;
+
+            // Generate inline badges for hero section
+            const heroBadges = uniqueClassifications.map(([key, count]) => {
+                const classMap = { TruePositive: 'tp', BenignPositive: 'bp', FalsePositive: 'fp', Undetermined: 'ud' };
+                const labelMap = { TruePositive: 'True Positive', BenignPositive: 'Benign Positive', FalsePositive: 'False Positive', Undetermined: 'Undetermined' };
+                return `<span class="hero-badge ${classMap[key]}"><span class="hero-badge-count">${count}</span> ${labelMap[key]}</span>`;
+            }).join('');
+
             const reportHTML = `
                 <div class="report-header">
                     <h2>Escalation Report</h2>
@@ -1098,11 +1142,11 @@
                         <div class="hero-value">${escalations.length}</div>
                         <div class="hero-label">Total Escalations</div>
                         <div class="hero-period">${reportPeriod}</div>
+                        ${escalations.length > 0 ? `<div class="hero-classification">${heroBadges}</div>` : ''}
                     </div>
                 </div>
 
-                ${escalations.length > 0 ? `
-                    ${generateClassificationGrid(escalations)}
+                ${escalations.length > 0 && hasMultipleTypes ? `
                     <div class="chart-section">
                         ${generateDonutChart(escalations)}
                     </div>
