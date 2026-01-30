@@ -349,27 +349,28 @@
 
         .donut-chart {
             position: relative;
-            width: 70px;
-            height: 70px;
+            width: 64px;
+            height: 64px;
             flex-shrink: 0;
         }
 
         .donut-chart svg {
             transform: rotate(-90deg);
             display: block;
+            width: 64px;
+            height: 64px;
         }
 
         .donut-chart circle {
             fill: none;
-            stroke-width: 10;
         }
 
         .donut-center {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 64px;
+            height: 64px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -377,7 +378,7 @@
         }
 
         .donut-center-value {
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             color: #1e293b;
             line-height: 1;
@@ -388,7 +389,7 @@
             color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         .chart-legend {
@@ -1043,7 +1044,10 @@
             const counts = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
             escalations.forEach(e => { counts[e.classification] = (counts[e.classification] || 0) + 1; });
 
-            const radius = 25;
+            const size = 64;
+            const strokeWidth = 8;
+            const radius = (size - strokeWidth) / 2;
+            const center = size / 2;
             const circumference = 2 * Math.PI * radius;
 
             const tpPct = (counts.TruePositive / total) * 100;
@@ -1072,12 +1076,12 @@
             return `
                 <div class="donut-wrapper">
                     <div class="donut-chart">
-                        <svg width="70" height="70" viewBox="0 0 70 70">
-                            <circle cx="35" cy="35" r="${radius}" stroke="#e2e8f0" />
-                            ${counts.TruePositive > 0 ? `<circle cx="35" cy="35" r="${radius}" stroke="#dc2626" stroke-dasharray="${tpDash} ${circumference}" stroke-dashoffset="${-tpOffset}" />` : ''}
-                            ${counts.BenignPositive > 0 ? `<circle cx="35" cy="35" r="${radius}" stroke="#f59e0b" stroke-dasharray="${bpDash} ${circumference}" stroke-dashoffset="${-bpOffset}" />` : ''}
-                            ${counts.FalsePositive > 0 ? `<circle cx="35" cy="35" r="${radius}" stroke="#10b981" stroke-dasharray="${fpDash} ${circumference}" stroke-dashoffset="${-fpOffset}" />` : ''}
-                            ${counts.Undetermined > 0 ? `<circle cx="35" cy="35" r="${radius}" stroke="#64748b" stroke-dasharray="${udDash} ${circumference}" stroke-dashoffset="${-udOffset}" />` : ''}
+                        <svg viewBox="0 0 ${size} ${size}">
+                            <circle cx="${center}" cy="${center}" r="${radius}" stroke="#e2e8f0" stroke-width="${strokeWidth}" fill="none" />
+                            ${counts.TruePositive > 0 ? `<circle cx="${center}" cy="${center}" r="${radius}" stroke="#dc2626" stroke-width="${strokeWidth}" fill="none" stroke-dasharray="${tpDash} ${circumference}" stroke-dashoffset="${-tpOffset}" />` : ''}
+                            ${counts.BenignPositive > 0 ? `<circle cx="${center}" cy="${center}" r="${radius}" stroke="#f59e0b" stroke-width="${strokeWidth}" fill="none" stroke-dasharray="${bpDash} ${circumference}" stroke-dashoffset="${-bpOffset}" />` : ''}
+                            ${counts.FalsePositive > 0 ? `<circle cx="${center}" cy="${center}" r="${radius}" stroke="#10b981" stroke-width="${strokeWidth}" fill="none" stroke-dasharray="${fpDash} ${circumference}" stroke-dashoffset="${-fpOffset}" />` : ''}
+                            ${counts.Undetermined > 0 ? `<circle cx="${center}" cy="${center}" r="${radius}" stroke="#64748b" stroke-width="${strokeWidth}" fill="none" stroke-dasharray="${udDash} ${circumference}" stroke-dashoffset="${-udOffset}" />` : ''}
                         </svg>
                         <div class="donut-center">
                             <div class="donut-center-value">${total}</div>
