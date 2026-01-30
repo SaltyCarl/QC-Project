@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escalation Report Generator</title>
+    <title>QC Audit Report Generator</title>
     <style>
         * {
             margin: 0;
@@ -574,11 +574,29 @@
             min-width: 0;
         }
 
-        .esc-ticket {
+        .esc-ids {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .esc-ticket-num {
             font-family: 'SF Mono', 'Consolas', monospace;
             font-size: 0.85rem;
             font-weight: 600;
             color: #1e293b;
+        }
+
+        .esc-separator {
+            color: #cbd5e1;
+            font-size: 0.8rem;
+        }
+
+        .esc-incident-num {
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #64748b;
         }
 
         .esc-title {
@@ -756,7 +774,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Escalation Report Generator</h1>
+        <h1>QC Audit Report Generator</h1>
 
         <div class="input-section">
             <h3 class="section-title">Report Details</h3>
@@ -860,7 +878,11 @@
                 <div class="input-grid">
                     <div class="input-group">
                         <label>Service Ticket</label>
-                        <input type="text" class="esc-id" placeholder="Sentinel Incident ID">
+                        <input type="text" class="esc-ticket" placeholder="e.g., INC0012345">
+                    </div>
+                    <div class="input-group">
+                        <label>Sentinel Incident</label>
+                        <input type="text" class="esc-incident" placeholder="e.g., 12345">
                     </div>
                     <div class="input-group">
                         <label>Classification</label>
@@ -937,7 +959,8 @@
             const escalations = [];
             entries.forEach(entry => {
                 escalations.push({
-                    id: entry.querySelector('.esc-id').value || 'N/A',
+                    ticket: entry.querySelector('.esc-ticket').value || '',
+                    incident: entry.querySelector('.esc-incident').value || '',
                     title: entry.querySelector('.esc-title').value || '',
                     classification: entry.querySelector('.esc-class').value,
                     threat: entry.querySelector('.esc-threat').value || 'N/A',
@@ -1067,12 +1090,18 @@
                         }
                     }
 
+                    const ticketDisplay = esc.ticket || 'N/A';
+                    const incidentDisplay = esc.incident ? `INC-${esc.incident}` : '';
+
                     escalationCards += `
                         <div class="escalation-card">
                             <div class="escalation-card-header">
                                 <div class="esc-number">${idx + 1}</div>
                                 <div class="esc-main">
-                                    <div class="esc-ticket">${esc.id}</div>
+                                    <div class="esc-ids">
+                                        <span class="esc-ticket-num">${ticketDisplay}</span>
+                                        ${incidentDisplay ? `<span class="esc-separator">|</span><span class="esc-incident-num">${incidentDisplay}</span>` : ''}
+                                    </div>
                                     ${esc.title ? `<div class="esc-title" title="${esc.title}">${esc.title}</div>` : ''}
                                 </div>
                                 <span class="status-badge ${statusClass}">${esc.classification}</span>
@@ -1129,7 +1158,7 @@
 
             const reportHTML = `
                 <div class="report-header">
-                    <h2>Escalation Report</h2>
+                    <h2>Quality Control Audit</h2>
                     <div class="subtitle">${environment}</div>
                     <div class="client-name">${clientName}</div>
                 </div>
