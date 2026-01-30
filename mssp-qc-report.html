@@ -1351,8 +1351,8 @@ Undetermined,,Medium,36"></textarea>
                     <input type="number" id="totalCases" placeholder="Auto from import" readonly style="cursor: not-allowed; opacity: 0.8;">
                 </div>
                 <div class="input-group">
-                    <label>Total Escalated <span style="color: #60a5fa; cursor: help;" title="Count of incidents escalated to the client via email. Should match TruePositive count if classifications are correct.">ⓘ</span></label>
-                    <input type="number" id="totalEscalated" placeholder="From mailbox review">
+                    <label>Total Escalated <span style="color: #60a5fa; cursor: help;" title="Auto-calculated from escalation entries. Should match TruePositive count if classifications are correct.">ⓘ</span></label>
+                    <input type="number" id="totalEscalated" placeholder="Auto from entries" readonly style="cursor: not-allowed; opacity: 0.8;">
                 </div>
             </div>
             <div class="input-grid">
@@ -1841,6 +1841,9 @@ CONCLUSION:
             } else {
                 counter.textContent = '';
             }
+            // Auto-update Total Escalated count
+            document.getElementById('totalEscalated').value = entries.length;
+            validateEscalationCount();
         }
 
         function getEscalations() {
