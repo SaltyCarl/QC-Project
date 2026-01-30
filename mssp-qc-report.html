@@ -338,54 +338,46 @@
             flex: 1;
             display: flex;
             justify-content: center;
+            align-items: center;
         }
 
-        /* Compact Donut Chart */
+        /* Compact Donut Chart - CSS based */
         .donut-wrapper {
             display: flex;
             align-items: center;
             gap: 24px;
         }
 
-        .donut-chart {
-            position: relative;
-            width: 64px;
-            height: 64px;
+        .donut-ring {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex-shrink: 0;
         }
 
-        .donut-chart svg {
-            transform: rotate(-90deg);
-            display: block;
-            width: 64px;
-            height: 64px;
-        }
-
-        .donut-chart circle {
-            fill: none;
-        }
-
-        .donut-center {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 64px;
-            height: 64px;
+        .donut-hole {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #f8fafc;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
         }
 
-        .donut-center-value {
-            font-size: 0.95rem;
+        .donut-value {
+            font-size: 0.9rem;
             font-weight: 600;
             color: #1e293b;
             line-height: 1;
         }
 
-        .donut-center-label {
-            font-size: 0.45rem;
+        .donut-label {
+            font-size: 0.4rem;
             color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.03em;
@@ -1044,28 +1036,6 @@
             const counts = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
             escalations.forEach(e => { counts[e.classification] = (counts[e.classification] || 0) + 1; });
 
-            const size = 64;
-            const strokeWidth = 8;
-            const radius = (size - strokeWidth) / 2;
-            const center = size / 2;
-            const circumference = 2 * Math.PI * radius;
-
-            const tpPct = (counts.TruePositive / total) * 100;
-            const bpPct = (counts.BenignPositive / total) * 100;
-            const fpPct = (counts.FalsePositive / total) * 100;
-            const udPct = (counts.Undetermined / total) * 100;
-
-            const tpDash = (tpPct / 100) * circumference;
-            const bpDash = (bpPct / 100) * circumference;
-            const fpDash = (fpPct / 100) * circumference;
-            const udDash = (udPct / 100) * circumference;
-
-            let offset = 0;
-            const tpOffset = offset; offset += tpDash;
-            const bpOffset = offset; offset += bpDash;
-            const fpOffset = offset; offset += fpDash;
-            const udOffset = offset;
-
             const legendItems = [
                 { label: 'True Positive', value: counts.TruePositive, color: '#dc2626' },
                 { label: 'Benign Positive', value: counts.BenignPositive, color: '#f59e0b' },
@@ -1073,19 +1043,34 @@
                 { label: 'Undetermined', value: counts.Undetermined, color: '#64748b' }
             ].filter(item => item.value > 0);
 
+            // Build conic gradient for the donut
+            let gradientStops = [];
+            let currentPct = 0;
+            const colors = [
+                { key: 'TruePositive', color: '#dc2626' },
+                { key: 'BenignPositive', color: '#f59e0b' },
+                { key: 'FalsePositive', color: '#10b981' },
+                { key: 'Undetermined', color: '#64748b' }
+            ];
+
+            colors.forEach(c => {
+                if (counts[c.key] > 0) {
+                    const pct = (counts[c.key] / total) * 100;
+                    gradientStops.push(`${c.color} ${currentPct}% ${currentPct + pct}%`);
+                    currentPct += pct;
+                }
+            });
+
+            const gradient = gradientStops.length > 0
+                ? `conic-gradient(from 0deg, ${gradientStops.join(', ')})`
+                : '#e2e8f0';
+
             return `
                 <div class="donut-wrapper">
-                    <div class="donut-chart">
-                        <svg viewBox="0 0 ${size} ${size}">
-                            <circle cx="${center}" cy="${center}" r="${radius}" stroke="#e2e8f0" stroke-width="${strokeWidth}" fill="none" />
-                            ${counts.TruePositive > 0 ? `<circle cx="${center}" cy="${center}" r="${radius}" stroke="#dc2626" stroke-width="${strokeWidth}" fill="none" stroke-dasharray="${tpDash} ${circumference}" stroke-dashoffset="${-tpOffset}" />` : ''}
-                            ${counts.BenignPositive > 0 ? `<circle cx="${center}" cy="${center}" r="${radius}" stroke="#f59e0b" stroke-width="${strokeWidth}" fill="none" stroke-dasharray="${bpDash} ${circumference}" stroke-dashoffset="${-bpOffset}" />` : ''}
-                            ${counts.FalsePositive > 0 ? `<circle cx="${center}" cy="${center}" r="${radius}" stroke="#10b981" stroke-width="${strokeWidth}" fill="none" stroke-dasharray="${fpDash} ${circumference}" stroke-dashoffset="${-fpOffset}" />` : ''}
-                            ${counts.Undetermined > 0 ? `<circle cx="${center}" cy="${center}" r="${radius}" stroke="#64748b" stroke-width="${strokeWidth}" fill="none" stroke-dasharray="${udDash} ${circumference}" stroke-dashoffset="${-udOffset}" />` : ''}
-                        </svg>
-                        <div class="donut-center">
-                            <div class="donut-center-value">${total}</div>
-                            <div class="donut-center-label">Total</div>
+                    <div class="donut-ring" style="background: ${gradient};">
+                        <div class="donut-hole">
+                            <span class="donut-value">${total}</span>
+                            <span class="donut-label">Total</span>
                         </div>
                     </div>
                     <div class="chart-legend">
