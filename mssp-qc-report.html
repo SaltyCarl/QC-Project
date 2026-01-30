@@ -1143,10 +1143,16 @@
                     </div>
                 </div>
 
-                ${escalations.length > 0 && hasMultipleTypes ? `
+                ${escalations.length > 0 ? `
+                    <div class="section-header" style="margin-bottom: 16px;">Escalation Classification Distribution</div>
                     <div class="chart-section">
                         ${generateDonutChart(escalations)}
                     </div>
+                ` : ''}
+
+                ${escalations.length > 0 ? `
+                    <div class="section-header" style="margin-bottom: 16px;">Escalation Classification Breakdown</div>
+                    ${generateClassificationGrid(escalations)}
                 ` : ''}
 
                 <div class="escalations-container">
