@@ -344,44 +344,51 @@
         .donut-wrapper {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 24px;
         }
 
         .donut-chart {
             position: relative;
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
+            flex-shrink: 0;
         }
 
         .donut-chart svg {
             transform: rotate(-90deg);
+            display: block;
         }
 
         .donut-chart circle {
             fill: none;
-            stroke-width: 12;
+            stroke-width: 10;
         }
 
         .donut-center {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         .donut-center-value {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             color: #1e293b;
             line-height: 1;
         }
 
         .donut-center-label {
-            font-size: 0.5rem;
-            color: #64748b;
+            font-size: 0.45rem;
+            color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.03em;
+            margin-top: 2px;
         }
 
         .chart-legend {
@@ -1036,7 +1043,7 @@
             const counts = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
             escalations.forEach(e => { counts[e.classification] = (counts[e.classification] || 0) + 1; });
 
-            const radius = 30;
+            const radius = 25;
             const circumference = 2 * Math.PI * radius;
 
             const tpPct = (counts.TruePositive / total) * 100;
@@ -1065,12 +1072,12 @@
             return `
                 <div class="donut-wrapper">
                     <div class="donut-chart">
-                        <svg width="80" height="80" viewBox="0 0 80 80">
-                            <circle cx="40" cy="40" r="${radius}" stroke="#e2e8f0" />
-                            ${counts.TruePositive > 0 ? `<circle cx="40" cy="40" r="${radius}" stroke="#dc2626" stroke-dasharray="${tpDash} ${circumference}" stroke-dashoffset="${-tpOffset}" />` : ''}
-                            ${counts.BenignPositive > 0 ? `<circle cx="40" cy="40" r="${radius}" stroke="#f59e0b" stroke-dasharray="${bpDash} ${circumference}" stroke-dashoffset="${-bpOffset}" />` : ''}
-                            ${counts.FalsePositive > 0 ? `<circle cx="40" cy="40" r="${radius}" stroke="#10b981" stroke-dasharray="${fpDash} ${circumference}" stroke-dashoffset="${-fpOffset}" />` : ''}
-                            ${counts.Undetermined > 0 ? `<circle cx="40" cy="40" r="${radius}" stroke="#64748b" stroke-dasharray="${udDash} ${circumference}" stroke-dashoffset="${-udOffset}" />` : ''}
+                        <svg width="70" height="70" viewBox="0 0 70 70">
+                            <circle cx="35" cy="35" r="${radius}" stroke="#e2e8f0" />
+                            ${counts.TruePositive > 0 ? `<circle cx="35" cy="35" r="${radius}" stroke="#dc2626" stroke-dasharray="${tpDash} ${circumference}" stroke-dashoffset="${-tpOffset}" />` : ''}
+                            ${counts.BenignPositive > 0 ? `<circle cx="35" cy="35" r="${radius}" stroke="#f59e0b" stroke-dasharray="${bpDash} ${circumference}" stroke-dashoffset="${-bpOffset}" />` : ''}
+                            ${counts.FalsePositive > 0 ? `<circle cx="35" cy="35" r="${radius}" stroke="#10b981" stroke-dasharray="${fpDash} ${circumference}" stroke-dashoffset="${-fpOffset}" />` : ''}
+                            ${counts.Undetermined > 0 ? `<circle cx="35" cy="35" r="${radius}" stroke="#64748b" stroke-dasharray="${udDash} ${circumference}" stroke-dashoffset="${-udOffset}" />` : ''}
                         </svg>
                         <div class="donut-center">
                             <div class="donut-center-value">${total}</div>
