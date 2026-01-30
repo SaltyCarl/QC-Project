@@ -1310,8 +1310,8 @@
 | where TimeGenerated > ago(30d)
 | summarize arg_max(TimeGenerated, *) by IncidentNumber
 | where Status == "Closed"
-| summarize Count = count() by Classification, ClassificationReason
-| order by Classification asc</code></pre>
+| summarize Count = count() by Classification, ClassificationReason, Severity
+| order by Classification asc, Severity asc</code></pre>
                     <p style="margin-bottom: 12px;">Run in your client's Sentinel workspace, export results as CSV, then paste or upload below.</p>
                     <details style="margin-top: 8px;">
                         <summary style="cursor: pointer; color: #60a5fa; font-size: 0.85rem;">Show Detailed Incident Query</summary>
@@ -1330,11 +1330,11 @@
                         <textarea id="csvInput" class="csv-input" placeholder="Paste CSV data here...
 
 Example format:
-Classification,ClassificationReason,Count
-TruePositive,SuspiciousActivity,2
-BenignPositive,InaccurateData,150
-FalsePositive,IncorrectAlertLogic,700
-Undetermined,,36"></textarea>
+Classification,ClassificationReason,Severity,Count
+TruePositive,SuspiciousActivity,High,2
+BenignPositive,InaccurateData,Medium,150
+FalsePositive,IncorrectAlertLogic,Low,700
+Undetermined,,Medium,36"></textarea>
                     </div>
                     <div class="import-actions">
                         <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="handleFileUpload(event)">
@@ -1371,6 +1371,26 @@ Undetermined,,36"></textarea>
                 <div class="input-group">
                     <label>Undetermined</label>
                     <input type="number" id="classUD" placeholder="0">
+                </div>
+            </div>
+
+            <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 20px 0 12px; text-transform: uppercase; letter-spacing: 0.05em;">Severity Breakdown (from import)</h4>
+            <div class="input-grid">
+                <div class="input-group">
+                    <label>High</label>
+                    <input type="number" id="sevHigh" placeholder="0">
+                </div>
+                <div class="input-group">
+                    <label>Medium</label>
+                    <input type="number" id="sevMedium" placeholder="0">
+                </div>
+                <div class="input-group">
+                    <label>Low</label>
+                    <input type="number" id="sevLow" placeholder="0">
+                </div>
+                <div class="input-group">
+                    <label>Informational</label>
+                    <input type="number" id="sevInfo" placeholder="0">
                 </div>
             </div>
 
@@ -1431,6 +1451,10 @@ Example:
                     <label class="toggle-item">
                         <input type="checkbox" id="toggle-case-bar" checked onchange="toggleSection('case-bar')">
                         <span class="toggle-label">Case Volume Chart</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-case-severity" checked onchange="toggleSection('case-severity')">
+                        <span class="toggle-label">Case Severity Chart</span>
                     </label>
                     <label class="toggle-item">
                         <input type="checkbox" id="toggle-class-breakdown" checked onchange="toggleSection('class-breakdown')">
@@ -1540,8 +1564,8 @@ Example:
 | where TimeGenerated > ago(${days}d)
 | summarize arg_max(TimeGenerated, *) by IncidentNumber
 | where Status == "Closed"
-| summarize Count = count() by Classification, ClassificationReason
-| order by Classification asc`;
+| summarize Count = count() by Classification, ClassificationReason, Severity
+| order by Classification asc, Severity asc`;
 
             document.getElementById('kqlQueryText').textContent = summaryQuery;
 
@@ -1604,57 +1628,73 @@ Example:
                 // Find column indices
                 const classIdx = headers.findIndex(h => h.includes('classification') && !h.includes('reason'));
                 const reasonIdx = headers.findIndex(h => h.includes('reason') || h.includes('classificationreason'));
+                const severityIdx = headers.findIndex(h => h.includes('severity'));
                 const countIdx = headers.findIndex(h => h.includes('count') || h === 'count_');
 
                 if (classIdx === -1 || countIdx === -1) {
-                    throw new Error('Could not find Classification and Count columns. Expected headers: Classification, ClassificationReason, Count');
+                    throw new Error('Could not find Classification and Count columns. Expected headers: Classification, ClassificationReason, Severity, Count');
                 }
 
                 // Parse data rows
                 classificationData = [];
-                const totals = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
+                const classTotals = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
+                const sevTotals = { High: 0, Medium: 0, Low: 0, Informational: 0 };
 
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(delimiter).map(c => c.trim().replace(/"/g, ''));
                     if (cols.length > Math.max(classIdx, countIdx)) {
                         const classification = cols[classIdx] || 'Undetermined';
                         const reason = reasonIdx >= 0 ? (cols[reasonIdx] || '') : '';
+                        const severity = severityIdx >= 0 ? (cols[severityIdx] || '') : '';
                         const count = parseInt(cols[countIdx]) || 0;
 
-                        classificationData.push({ classification, reason, count });
+                        classificationData.push({ classification, reason, severity, count });
 
                         // Aggregate by classification type
-                        if (classification in totals) {
-                            totals[classification] += count;
+                        if (classification in classTotals) {
+                            classTotals[classification] += count;
                         } else if (classification === '' || classification.toLowerCase() === 'undetermined') {
-                            totals.Undetermined += count;
+                            classTotals.Undetermined += count;
+                        }
+
+                        // Aggregate by severity
+                        if (severity in sevTotals) {
+                            sevTotals[severity] += count;
                         }
                     }
                 }
 
                 // Calculate total
-                const totalCases = Object.values(totals).reduce((a, b) => a + b, 0);
+                const totalCases = Object.values(classTotals).reduce((a, b) => a + b, 0);
 
-                // Update form fields
+                // Update classification fields
                 document.getElementById('totalCases').value = totalCases;
-                document.getElementById('classTP').value = totals.TruePositive;
-                document.getElementById('classBP').value = totals.BenignPositive;
-                document.getElementById('classFP').value = totals.FalsePositive;
-                document.getElementById('classUD').value = totals.Undetermined;
+                document.getElementById('classTP').value = classTotals.TruePositive;
+                document.getElementById('classBP').value = classTotals.BenignPositive;
+                document.getElementById('classFP').value = classTotals.FalsePositive;
+                document.getElementById('classUD').value = classTotals.Undetermined;
+
+                // Update severity fields
+                document.getElementById('sevHigh').value = sevTotals.High;
+                document.getElementById('sevMedium').value = sevTotals.Medium;
+                document.getElementById('sevLow').value = sevTotals.Low;
+                document.getElementById('sevInfo').value = sevTotals.Informational;
 
                 // Show success
                 statusEl.className = 'import-status success';
-                statusEl.textContent = `Imported ${lines.length - 1} rows: ${totalCases} total cases (TP: ${totals.TruePositive}, BP: ${totals.BenignPositive}, FP: ${totals.FalsePositive}, UD: ${totals.Undetermined})`;
+                const sevSummary = severityIdx >= 0 ? ` | Severity: H:${sevTotals.High} M:${sevTotals.Medium} L:${sevTotals.Low} I:${sevTotals.Informational}` : '';
+                statusEl.textContent = `Imported ${lines.length - 1} rows: ${totalCases} total cases (TP: ${classTotals.TruePositive}, BP: ${classTotals.BenignPositive}, FP: ${classTotals.FalsePositive}, UD: ${classTotals.Undetermined})${sevSummary}`;
 
-                // Show breakdown table if there are classification reasons
-                if (classificationData.some(d => d.reason)) {
+                // Show breakdown table if there are classification reasons or severity
+                if (classificationData.some(d => d.reason || d.severity)) {
                     let tableHTML = `
-                        <div class="breakdown-title">Classification Breakdown by Reason</div>
+                        <div class="breakdown-title">Classification Breakdown</div>
                         <table class="breakdown-table">
                             <thead>
                                 <tr>
                                     <th>Classification</th>
                                     <th>Reason</th>
+                                    <th>Severity</th>
                                     <th>Count</th>
                                 </tr>
                             </thead>
@@ -1665,6 +1705,7 @@ Example:
                             <tr>
                                 <td>${row.classification || 'Undetermined'}</td>
                                 <td>${row.reason || '-'}</td>
+                                <td>${row.severity || '-'}</td>
                                 <td>${row.count}</td>
                             </tr>
                         `;
@@ -1908,6 +1949,36 @@ CONCLUSION:
             `;
         }
 
+        function generateCaseSeverityChart(high, medium, low, info) {
+            const total = high + medium + low + info;
+            if (total === 0) return '';
+
+            const maxCount = Math.max(high, medium, low, info, 1);
+
+            const bars = [
+                { label: 'High', value: high, color: '#dc2626' },
+                { label: 'Medium', value: medium, color: '#f59e0b' },
+                { label: 'Low', value: low, color: '#3b82f6' },
+                { label: 'Informational', value: info, color: '#64748b' }
+            ].filter(b => b.value > 0);
+
+            return `
+                <div class="bar-chart">
+                    ${bars.map(bar => `
+                        <div class="bar-item">
+                            <div class="bar-label">${bar.label}</div>
+                            <div class="bar-track">
+                                <div class="bar-fill" style="width: ${Math.max((bar.value / maxCount) * 100, 5)}%; background: ${bar.color};">
+                                    ${(bar.value / maxCount) * 100 > 15 ? `<span class="bar-value">${bar.value}</span>` : ''}
+                                </div>
+                                ${(bar.value / maxCount) * 100 <= 15 ? `<span class="bar-value outside">${bar.value}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         function generateBarChart(total, escalated, tp, bp, fp, ud) {
             const maxVal = Math.max(total, 1);
 
@@ -2085,6 +2156,12 @@ CONCLUSION:
             const classFP = parseInt(document.getElementById('classFP').value) || 0;
             const classUD = parseInt(document.getElementById('classUD').value) || 0;
 
+            // Case Severity
+            const sevHigh = parseInt(document.getElementById('sevHigh').value) || 0;
+            const sevMedium = parseInt(document.getElementById('sevMedium').value) || 0;
+            const sevLow = parseInt(document.getElementById('sevLow').value) || 0;
+            const sevInfo = parseInt(document.getElementById('sevInfo').value) || 0;
+
             const escalations = getEscalations();
             const summaryNotes = document.getElementById('summaryNotes').value;
 
@@ -2244,6 +2321,13 @@ CONCLUSION:
                     </div>
                 </div>
 
+                ${(sevHigh + sevMedium + sevLow + sevInfo) > 0 ? `
+                <div class="chart-container" style="margin-bottom: 40px;" data-section="case-severity">
+                    <div class="chart-title">Case Severity Distribution</div>
+                    ${generateCaseSeverityChart(sevHigh, sevMedium, sevLow, sevInfo)}
+                </div>
+                ` : ''}
+
                 <div data-section="class-breakdown">${breakdownHTML}</div>
 
                 ${escalations.length > 0 ? `
@@ -2390,6 +2474,10 @@ CONCLUSION:
                 classBP: document.getElementById('classBP').value,
                 classFP: document.getElementById('classFP').value,
                 classUD: document.getElementById('classUD').value,
+                sevHigh: document.getElementById('sevHigh').value,
+                sevMedium: document.getElementById('sevMedium').value,
+                sevLow: document.getElementById('sevLow').value,
+                sevInfo: document.getElementById('sevInfo').value,
                 csvInput: document.getElementById('csvInput').value,
                 summaryNotes: document.getElementById('summaryNotes').value,
                 escalations: escalationEntries,
@@ -2446,6 +2534,10 @@ CONCLUSION:
             document.getElementById('classBP').value = data.classBP || '';
             document.getElementById('classFP').value = data.classFP || '';
             document.getElementById('classUD').value = data.classUD || '';
+            document.getElementById('sevHigh').value = data.sevHigh || '';
+            document.getElementById('sevMedium').value = data.sevMedium || '';
+            document.getElementById('sevLow').value = data.sevLow || '';
+            document.getElementById('sevInfo').value = data.sevInfo || '';
             document.getElementById('csvInput').value = data.csvInput || '';
             document.getElementById('summaryNotes').value = data.summaryNotes || '';
 
