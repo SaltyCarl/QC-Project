@@ -1727,6 +1727,96 @@ CONCLUSION:
             `;
         }
 
+        function generateEscalationDonutChart(escalations) {
+            const total = escalations.length;
+            if (total === 0) return '';
+
+            const counts = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
+            escalations.forEach(e => { counts[e.classification] = (counts[e.classification] || 0) + 1; });
+
+            const radius = 65;
+            const circumference = 2 * Math.PI * radius;
+
+            const tpPct = (counts.TruePositive / total) * 100;
+            const bpPct = (counts.BenignPositive / total) * 100;
+            const fpPct = (counts.FalsePositive / total) * 100;
+            const udPct = (counts.Undetermined / total) * 100;
+
+            const tpDash = (tpPct / 100) * circumference;
+            const bpDash = (bpPct / 100) * circumference;
+            const fpDash = (fpPct / 100) * circumference;
+            const udDash = (udPct / 100) * circumference;
+
+            let offset = 0;
+            const tpOffset = offset; offset += tpDash;
+            const bpOffset = offset; offset += bpDash;
+            const fpOffset = offset; offset += fpDash;
+            const udOffset = offset;
+
+            const legendItems = [
+                { label: 'TruePositive', value: counts.TruePositive, color: '#dc2626' },
+                { label: 'BenignPositive', value: counts.BenignPositive, color: '#f59e0b' },
+                { label: 'FalsePositive', value: counts.FalsePositive, color: '#10b981' },
+                { label: 'Undetermined', value: counts.Undetermined, color: '#64748b' }
+            ].filter(item => item.value > 0);
+
+            return `
+                <div class="donut-chart">
+                    <svg width="180" height="180" viewBox="0 0 180 180">
+                        <circle cx="90" cy="90" r="${radius}" stroke="#e2e8f0" />
+                        ${counts.TruePositive > 0 ? `<circle cx="90" cy="90" r="${radius}" stroke="#dc2626" stroke-dasharray="${tpDash} ${circumference}" stroke-dashoffset="${-tpOffset}" />` : ''}
+                        ${counts.BenignPositive > 0 ? `<circle cx="90" cy="90" r="${radius}" stroke="#f59e0b" stroke-dasharray="${bpDash} ${circumference}" stroke-dashoffset="${-bpOffset}" />` : ''}
+                        ${counts.FalsePositive > 0 ? `<circle cx="90" cy="90" r="${radius}" stroke="#10b981" stroke-dasharray="${fpDash} ${circumference}" stroke-dashoffset="${-fpOffset}" />` : ''}
+                        ${counts.Undetermined > 0 ? `<circle cx="90" cy="90" r="${radius}" stroke="#64748b" stroke-dasharray="${udDash} ${circumference}" stroke-dashoffset="${-udOffset}" />` : ''}
+                    </svg>
+                    <div class="donut-center">
+                        <div class="donut-center-value">${total}</div>
+                        <div class="donut-center-label">Escalations</div>
+                    </div>
+                </div>
+                <div class="chart-legend">
+                    ${legendItems.map(item => `
+                        <div class="legend-item">
+                            <span style="display: flex; align-items: center;">
+                                <span class="legend-color" style="background: ${item.color};"></span>
+                                <span class="legend-label">${item.label}</span>
+                            </span>
+                            <span class="legend-value">${item.value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function generateEscalationBreakdownGrid(escalations) {
+            const total = escalations.length;
+            if (total === 0) return '';
+
+            const counts = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
+            escalations.forEach(e => { counts[e.classification] = (counts[e.classification] || 0) + 1; });
+
+            const cards = [
+                { key: 'TruePositive', label: 'True Positive', class: 'danger', value: counts.TruePositive },
+                { key: 'BenignPositive', label: 'Benign Positive', class: 'warning', value: counts.BenignPositive },
+                { key: 'FalsePositive', label: 'False Positive', class: '', value: counts.FalsePositive },
+                { key: 'Undetermined', label: 'Undetermined', class: '', value: counts.Undetermined }
+            ].filter(c => c.value > 0);
+
+            if (cards.length === 0) return '';
+
+            return `
+                <div class="metrics-grid" style="grid-template-columns: repeat(${Math.min(cards.length, 4)}, 1fr); margin-bottom: 32px;">
+                    ${cards.map(card => `
+                        <div class="metric-card ${card.class}">
+                            <div class="metric-value">${card.value}</div>
+                            <div class="metric-label">${card.label}</div>
+                            <div class="metric-percent">${((card.value / total) * 100).toFixed(0)}%</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         function generateReport() {
             const clientName = document.getElementById('clientName').value || 'Client';
             const reportPeriod = formatDateRange();
@@ -1900,6 +1990,17 @@ CONCLUSION:
                 </div>
 
                 ${breakdownHTML}
+
+                ${escalations.length > 0 ? `
+                <div style="margin-bottom: 40px;">
+                    <h3 class="report-section-title">Escalation Classification Distribution</h3>
+                    <div class="chart-container" style="margin-bottom: 24px;">
+                        ${generateEscalationDonutChart(escalations)}
+                    </div>
+                    <h3 class="report-section-title">Escalation Classification Breakdown</h3>
+                    ${generateEscalationBreakdownGrid(escalations)}
+                </div>
+                ` : ''}
 
                 <div class="escalations-container">
                     <h3 class="report-section-title">Escalation Details</h3>
