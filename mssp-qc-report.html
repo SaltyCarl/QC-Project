@@ -1511,6 +1511,10 @@ Example:
                         <label>Incident Number</label>
                         <input type="text" class="esc-incident-num" placeholder="e.g., INC0012345">
                     </div>
+                    <div class="input-group">
+                        <label>Incident Date</label>
+                        <input type="date" class="esc-date" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
                     <div class="input-group" style="grid-column: 1 / -1;">
                         <label>Incident Title</label>
                         <input type="text" class="esc-title" placeholder="e.g., Suspicious PowerShell execution on WORKSTATION-01">
@@ -1604,6 +1608,7 @@ CONCLUSION:
                 escalations.push({
                     id: entry.querySelector('.esc-id').value || 'N/A',
                     incidentNum: entry.querySelector('.esc-incident-num').value || '',
+                    date: entry.querySelector('.esc-date').value || '',
                     title: entry.querySelector('.esc-title').value || '',
                     classification: entry.querySelector('.esc-class').value,
                     threat: entry.querySelector('.esc-threat').value || 'N/A',
@@ -1612,6 +1617,13 @@ CONCLUSION:
                     impact: entry.querySelector('.esc-impact').value,
                     action: entry.querySelector('.esc-action').value || ''
                 });
+            });
+            // Sort by date, newest first
+            escalations.sort((a, b) => {
+                if (!a.date && !b.date) return 0;
+                if (!a.date) return 1;
+                if (!b.date) return -1;
+                return new Date(b.date) - new Date(a.date);
             });
             return escalations;
         }
@@ -1874,6 +1886,7 @@ CONCLUSION:
                                             <span class="escalation-label">Service Ticket:</span>
                                             <span class="escalation-value">${esc.id}</span>
                                             ${esc.incidentNum ? `<span style="color: #94a3b8; margin: 0 8px;">|</span><span class="escalation-label">INC:</span><span class="escalation-value">${esc.incidentNum}</span>` : ''}
+                                            ${esc.date ? `<span style="color: #94a3b8; margin: 0 8px;">|</span><span class="escalation-value" style="color: #64748b; font-size: 0.9rem;">${new Date(esc.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>` : ''}
                                         </div>
                                         ${esc.title ? `<div class="escalation-title">${esc.title}</div>` : ''}
                                     </div>
