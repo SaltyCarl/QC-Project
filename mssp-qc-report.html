@@ -297,19 +297,19 @@
 
         /* Dashboard Grid */
         .dashboard {
-            display: grid;
-            grid-template-columns: 140px 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 20px;
             background: #f8fafc;
             border: 1px solid #e5e7eb;
             border-radius: 3px;
-            padding: 16px;
+            padding: 16px 24px;
         }
 
         .dash-metric {
             text-align: center;
-            padding: 12px;
+            padding: 8px 20px;
             border-right: 1px solid #e5e7eb;
         }
 
@@ -329,135 +329,88 @@
         }
 
         .dash-period {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #94a3b8;
-            margin-top: 6px;
-        }
-
-        /* Mini bar charts */
-        .dash-chart {
-            padding: 8px 12px;
-        }
-
-        .dash-chart-title {
-            font-size: 0.65rem;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .mini-bar {
-            display: flex;
-            align-items: center;
-            margin-bottom: 6px;
-            gap: 8px;
-        }
-
-        .mini-bar:last-child {
-            margin-bottom: 0;
-        }
-
-        .mini-bar-label {
-            font-size: 0.7rem;
-            color: #64748b;
-            width: 70px;
-            flex-shrink: 0;
-        }
-
-        .mini-bar-track {
-            flex: 1;
-            height: 14px;
-            background: #e5e7eb;
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .mini-bar-fill {
-            height: 100%;
-            border-radius: 2px;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding-right: 6px;
-            min-width: 20px;
-        }
-
-        .mini-bar-fill.severity-high { background: #dc2626; }
-        .mini-bar-fill.severity-medium { background: #f59e0b; }
-        .mini-bar-fill.severity-low { background: #3b82f6; }
-        .mini-bar-fill.severity-info { background: #64748b; }
-
-        .mini-bar-fill.class-tp { background: #dc2626; }
-        .mini-bar-fill.class-bp { background: #f59e0b; }
-        .mini-bar-fill.class-fp { background: #10b981; }
-        .mini-bar-fill.class-ud { background: #64748b; }
-
-        .mini-bar-value {
-            font-size: 0.65rem;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        /* Timeline chart */
-        .timeline-section {
-            margin-bottom: 20px;
-        }
-
-        .timeline-title {
-            font-size: 0.65rem;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        .timeline-chart {
-            display: flex;
-            align-items: flex-end;
-            gap: 3px;
-            height: 50px;
-            padding: 8px 12px;
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 3px;
-        }
-
-        .timeline-bar {
-            flex: 1;
-            background: #3b82f6;
-            border-radius: 2px 2px 0 0;
-            min-height: 4px;
-            position: relative;
-        }
-
-        .timeline-bar:hover::after {
-            content: attr(data-label);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1e293b;
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: 2px;
-            font-size: 0.6rem;
-            white-space: nowrap;
-            margin-bottom: 4px;
-        }
-
-        .timeline-labels {
-            display: flex;
-            justify-content: space-between;
             margin-top: 4px;
-            padding: 0 12px;
         }
 
-        .timeline-label {
-            font-size: 0.6rem;
-            color: #94a3b8;
+        .dash-donut {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Compact Donut Chart */
+        .donut-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .donut-chart {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .donut-chart svg {
+            transform: rotate(-90deg);
+        }
+
+        .donut-chart circle {
+            fill: none;
+            stroke-width: 12;
+        }
+
+        .donut-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .donut-center-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+            line-height: 1;
+        }
+
+        .donut-center-label {
+            font-size: 0.5rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+        }
+
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .legend-label {
+            color: #64748b;
+        }
+
+        .legend-value {
+            font-weight: 600;
+            color: #1e293b;
+            margin-left: auto;
         }
 
         /* Classification Breakdown - Visual Grid */
@@ -1078,12 +1031,12 @@
 
         function generateDonutChart(escalations) {
             const total = escalations.length;
-            if (total === 0) return '';
+            if (total === 0) return '<div style="color:#94a3b8;font-size:0.75rem;">No data</div>';
 
             const counts = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
             escalations.forEach(e => { counts[e.classification] = (counts[e.classification] || 0) + 1; });
 
-            const radius = 56;
+            const radius = 30;
             const circumference = 2 * Math.PI * radius;
 
             const tpPct = (counts.TruePositive / total) * 100;
@@ -1103,21 +1056,21 @@
             const udOffset = offset;
 
             const legendItems = [
-                { label: 'TruePositive', value: counts.TruePositive, color: '#dc2626' },
-                { label: 'BenignPositive', value: counts.BenignPositive, color: '#f59e0b' },
-                { label: 'FalsePositive', value: counts.FalsePositive, color: '#10b981' },
+                { label: 'True Positive', value: counts.TruePositive, color: '#dc2626' },
+                { label: 'Benign Positive', value: counts.BenignPositive, color: '#f59e0b' },
+                { label: 'False Positive', value: counts.FalsePositive, color: '#10b981' },
                 { label: 'Undetermined', value: counts.Undetermined, color: '#64748b' }
             ].filter(item => item.value > 0);
 
             return `
                 <div class="donut-wrapper">
                     <div class="donut-chart">
-                        <svg width="160" height="160" viewBox="0 0 160 160">
-                            <circle cx="80" cy="80" r="${radius}" stroke="#e2e8f0" />
-                            ${counts.TruePositive > 0 ? `<circle cx="80" cy="80" r="${radius}" stroke="#dc2626" stroke-dasharray="${tpDash} ${circumference}" stroke-dashoffset="${-tpOffset}" />` : ''}
-                            ${counts.BenignPositive > 0 ? `<circle cx="80" cy="80" r="${radius}" stroke="#f59e0b" stroke-dasharray="${bpDash} ${circumference}" stroke-dashoffset="${-bpOffset}" />` : ''}
-                            ${counts.FalsePositive > 0 ? `<circle cx="80" cy="80" r="${radius}" stroke="#10b981" stroke-dasharray="${fpDash} ${circumference}" stroke-dashoffset="${-fpOffset}" />` : ''}
-                            ${counts.Undetermined > 0 ? `<circle cx="80" cy="80" r="${radius}" stroke="#64748b" stroke-dasharray="${udDash} ${circumference}" stroke-dashoffset="${-udOffset}" />` : ''}
+                        <svg width="80" height="80" viewBox="0 0 80 80">
+                            <circle cx="40" cy="40" r="${radius}" stroke="#e2e8f0" />
+                            ${counts.TruePositive > 0 ? `<circle cx="40" cy="40" r="${radius}" stroke="#dc2626" stroke-dasharray="${tpDash} ${circumference}" stroke-dashoffset="${-tpOffset}" />` : ''}
+                            ${counts.BenignPositive > 0 ? `<circle cx="40" cy="40" r="${radius}" stroke="#f59e0b" stroke-dasharray="${bpDash} ${circumference}" stroke-dashoffset="${-bpOffset}" />` : ''}
+                            ${counts.FalsePositive > 0 ? `<circle cx="40" cy="40" r="${radius}" stroke="#10b981" stroke-dasharray="${fpDash} ${circumference}" stroke-dashoffset="${-fpOffset}" />` : ''}
+                            ${counts.Undetermined > 0 ? `<circle cx="40" cy="40" r="${radius}" stroke="#64748b" stroke-dasharray="${udDash} ${circumference}" stroke-dashoffset="${-udOffset}" />` : ''}
                         </svg>
                         <div class="donut-center">
                             <div class="donut-center-value">${total}</div>
@@ -1247,80 +1200,11 @@
                 </div>
             ` : '';
 
-            // Count classifications and severities
+            // Count classifications
             const classificationCounts = { TruePositive: 0, BenignPositive: 0, FalsePositive: 0, Undetermined: 0 };
-            const severityCounts = { High: 0, Medium: 0, Low: 0, Informational: 0 };
             escalations.forEach(e => {
                 classificationCounts[e.classification] = (classificationCounts[e.classification] || 0) + 1;
-                severityCounts[e.severity] = (severityCounts[e.severity] || 0) + 1;
             });
-
-            // Generate severity bars
-            const maxSev = Math.max(...Object.values(severityCounts), 1);
-            const severityBars = [
-                { label: 'High', count: severityCounts.High, class: 'severity-high' },
-                { label: 'Medium', count: severityCounts.Medium, class: 'severity-medium' },
-                { label: 'Low', count: severityCounts.Low, class: 'severity-low' },
-                { label: 'Info', count: severityCounts.Informational, class: 'severity-info' }
-            ].filter(s => s.count > 0).map(s => `
-                <div class="mini-bar">
-                    <span class="mini-bar-label">${s.label}</span>
-                    <div class="mini-bar-track">
-                        <div class="mini-bar-fill ${s.class}" style="width: ${(s.count / maxSev) * 100}%">
-                            <span class="mini-bar-value">${s.count}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            // Generate classification bars
-            const maxClass = Math.max(...Object.values(classificationCounts), 1);
-            const classBars = [
-                { label: 'True Pos', count: classificationCounts.TruePositive, class: 'class-tp' },
-                { label: 'Benign', count: classificationCounts.BenignPositive, class: 'class-bp' },
-                { label: 'False Pos', count: classificationCounts.FalsePositive, class: 'class-fp' },
-                { label: 'Undet', count: classificationCounts.Undetermined, class: 'class-ud' }
-            ].filter(c => c.count > 0).map(c => `
-                <div class="mini-bar">
-                    <span class="mini-bar-label">${c.label}</span>
-                    <div class="mini-bar-track">
-                        <div class="mini-bar-fill ${c.class}" style="width: ${(c.count / maxClass) * 100}%">
-                            <span class="mini-bar-value">${c.count}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            // Generate timeline from dates
-            let timelineHTML = '';
-            const datesWithEscalations = escalations.filter(e => e.date).map(e => e.date).sort();
-            if (datesWithEscalations.length > 0) {
-                const dateCounts = {};
-                datesWithEscalations.forEach(d => { dateCounts[d] = (dateCounts[d] || 0) + 1; });
-                const sortedDates = Object.keys(dateCounts).sort();
-                const maxCount = Math.max(...Object.values(dateCounts));
-
-                const bars = sortedDates.map(date => {
-                    const count = dateCounts[date];
-                    const height = (count / maxCount) * 100;
-                    const label = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    return `<div class="timeline-bar" style="height: ${Math.max(height, 10)}%;" data-label="${label}: ${count}"></div>`;
-                }).join('');
-
-                const firstDate = new Date(sortedDates[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                const lastDate = new Date(sortedDates[sortedDates.length - 1] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-                timelineHTML = `
-                    <div class="timeline-section">
-                        <div class="timeline-title">Escalations Over Time</div>
-                        <div class="timeline-chart">${bars}</div>
-                        <div class="timeline-labels">
-                            <span class="timeline-label">${firstDate}</span>
-                            <span class="timeline-label">${lastDate}</span>
-                        </div>
-                    </div>
-                `;
-            }
 
             const reportHTML = `
                 <div class="report-header">
@@ -1335,17 +1219,10 @@
                         <div class="dash-label">Escalations</div>
                         <div class="dash-period">${reportPeriod}</div>
                     </div>
-                    <div class="dash-chart">
-                        <div class="dash-chart-title">By Severity</div>
-                        ${severityBars || '<div style="color:#94a3b8;font-size:0.7rem;">No data</div>'}
-                    </div>
-                    <div class="dash-chart">
-                        <div class="dash-chart-title">By Classification</div>
-                        ${classBars || '<div style="color:#94a3b8;font-size:0.7rem;">No data</div>'}
+                    <div class="dash-donut">
+                        ${generateDonutChart(escalations)}
                     </div>
                 </div>
-
-                ${timelineHTML}
 
                 <div class="escalations-container">
                     <div class="section-header">Escalation Details</div>
