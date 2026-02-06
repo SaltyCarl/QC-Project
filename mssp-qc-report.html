@@ -1784,14 +1784,8 @@ Example:
                             </select>
                         </div>
                         <div class="input-group">
-                            <label>Client Impact</label>
-                            <select class="esc-impact">
-                                <option value="No Impact - Contained">No Impact - Contained</option>
-                                <option value="No Impact - False Positive">No Impact - False Positive</option>
-                                <option value="Limited Impact - Remediated">Limited Impact - Remediated</option>
-                                <option value="Significant Impact - Remediated">Significant Impact - Remediated</option>
-                                <option value="Ongoing - Client Action Required">Ongoing - Client Action Required</option>
-                            </select>
+                            <label>Affected Users / Assets</label>
+                            <input type="number" class="esc-impact" min="0" placeholder="e.g., 1" value="1">
                         </div>
                     </div>
                     <div class="input-grid">
@@ -2226,7 +2220,7 @@ CONCLUSION:
                                         <div class="info-value">${esc.severity}</div>
                                     </div>
                                     <div class="info-item impact">
-                                        <div class="info-label">Client Impact</div>
+                                        <div class="info-label">Affected Users / Assets</div>
                                         <div class="info-value">${esc.impact}</div>
                                     </div>
                                     ${assetsHtml}
