@@ -944,6 +944,47 @@
             margin-top: 10px;
         }
 
+        /* Sort Controls */
+        .sort-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sort-btn {
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 3px;
+            color: #64748b;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .sort-btn:hover {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .sort-btn.active {
+            background: #1e40af;
+            border-color: #1e40af;
+            color: #ffffff;
+        }
+
+        .sentinel-id-tag {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 2px 8px;
+            border-radius: 2px;
+            font-size: 0.75rem;
+            font-family: 'Consolas', 'SF Mono', 'Courier New', monospace;
+            border: 1px solid #cbd5e1;
+            font-weight: 500;
+        }
+
         .asset-tag {
             background: #dbeafe;
             color: #1e40af;
@@ -1196,7 +1237,7 @@
                 background: #fff;
             }
 
-            .input-section, .button-row, h1, .visibility-controls {
+            .input-section, .button-row, h1, .visibility-controls, .no-print {
                 display: none !important;
             }
 
@@ -1745,11 +1786,11 @@ Example:
                     <div class="input-grid">
                         <div class="input-group">
                             <label>Service Ticket</label>
-                            <input type="text" class="esc-id" placeholder="Sentinel Incident ID">
+                            <input type="text" class="esc-id" placeholder="e.g., TKT-001234">
                         </div>
                         <div class="input-group">
-                            <label>Incident Number</label>
-                            <input type="text" class="esc-incident-num" placeholder="e.g., INC0012345">
+                            <label>Sentinel Incident IDs</label>
+                            <input type="text" class="esc-incident-num" placeholder="e.g., 1234, 1235, 1236">
                         </div>
                         <div class="input-group">
                             <label>Incident Date</label>
@@ -1857,14 +1898,43 @@ CONCLUSION:
                     action: entry.querySelector('.esc-action').value || ''
                 });
             });
-            // Sort by date, newest first
-            escalations.sort((a, b) => {
-                if (!a.date && !b.date) return 0;
-                if (!a.date) return 1;
-                if (!b.date) return -1;
-                return new Date(b.date) - new Date(a.date);
-            });
             return escalations;
+        }
+
+        // Current sort preference (persisted)
+        let currentEscSort = 'classification';
+
+        function sortEscalations(escalations, sortBy) {
+            const classOrder = { TruePositive: 0, BenignPositive: 1, FalsePositive: 2, Undetermined: 3 };
+            const sevOrder = { High: 0, Medium: 1, Low: 2, Informational: 3 };
+
+            return [...escalations].sort((a, b) => {
+                switch (sortBy) {
+                    case 'classification':
+                        const ca = classOrder[a.classification] ?? 4;
+                        const cb = classOrder[b.classification] ?? 4;
+                        if (ca !== cb) return ca - cb;
+                        // Secondary: date descending
+                        return (b.date || '').localeCompare(a.date || '');
+                    case 'date':
+                        if (!a.date && !b.date) return 0;
+                        if (!a.date) return 1;
+                        if (!b.date) return -1;
+                        return new Date(b.date) - new Date(a.date);
+                    case 'severity':
+                        const sa = sevOrder[a.severity] ?? 4;
+                        const sb = sevOrder[b.severity] ?? 4;
+                        if (sa !== sb) return sa - sb;
+                        return (b.date || '').localeCompare(a.date || '');
+                    default:
+                        return 0;
+                }
+            });
+        }
+
+        function changeEscSort(sortBy) {
+            currentEscSort = sortBy;
+            generateReport();
         }
 
         function generateDonutChart(total, tp, bp, fp, ud) {
@@ -2168,10 +2238,11 @@ CONCLUSION:
             const fpRate = totalCases > 0 ? ((classFP / totalCases) * 100).toFixed(2) : 0;
             const udRate = totalCases > 0 ? ((classUD / totalCases) * 100).toFixed(2) : 0;
 
-            // Generate escalation cards
+            // Sort and generate escalation cards
+            const sortedEscalations = sortEscalations(escalations, currentEscSort);
             let escalationCards = '';
-            if (escalations.length > 0) {
-                escalations.forEach((esc, idx) => {
+            if (sortedEscalations.length > 0) {
+                sortedEscalations.forEach((esc, idx) => {
                     const statusClass = esc.classification === 'TruePositive' ? 'status-tp' :
                                        esc.classification === 'FalsePositive' ? 'status-fp' :
                                        esc.classification === 'BenignPositive' ? 'status-bp' :
@@ -2201,9 +2272,12 @@ CONCLUSION:
                                         <div class="escalation-ticket-row">
                                             <span class="escalation-label">Service Ticket:</span>
                                             <span class="escalation-value">${esc.id}</span>
-                                            ${esc.incidentNum ? `<span style="color: #94a3b8; margin: 0 8px;">|</span><span class="escalation-label">INC:</span><span class="escalation-value">${esc.incidentNum}</span>` : ''}
                                             ${esc.date ? `<span style="color: #94a3b8; margin: 0 8px;">|</span><span class="escalation-value" style="color: #64748b; font-size: 0.9rem;">${new Date(esc.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>` : ''}
                                         </div>
+                                        ${esc.incidentNum ? `<div style="margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                            <span class="escalation-label">Sentinel:</span>
+                                            ${esc.incidentNum.split(',').map(id => id.trim()).filter(id => id).map(id => `<span class="sentinel-id-tag">${id}</span>`).join('')}
+                                        </div>` : ''}
                                         ${esc.title ? `<div class="escalation-title">${esc.title}</div>` : ''}
                                     </div>
                                     <span class="status-badge ${statusClass}">${esc.classification}</span>
@@ -2345,7 +2419,15 @@ CONCLUSION:
                 ` : ''}
 
                 <div class="escalations-container" data-section="esc-details">
-                    <h3 class="report-section-title">Escalation Details</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 class="report-section-title" style="margin-bottom: 0;">Escalation Details</h3>
+                        <div class="sort-controls no-print">
+                            <span style="font-size: 0.7rem; color: #64748b; margin-right: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Sort by:</span>
+                            <button class="sort-btn ${currentEscSort === 'classification' ? 'active' : ''}" onclick="changeEscSort('classification')">Classification</button>
+                            <button class="sort-btn ${currentEscSort === 'date' ? 'active' : ''}" onclick="changeEscSort('date')">Date</button>
+                            <button class="sort-btn ${currentEscSort === 'severity' ? 'active' : ''}" onclick="changeEscSort('severity')">Severity</button>
+                        </div>
+                    </div>
                     ${escalationCards}
                 </div>
 
