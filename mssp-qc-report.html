@@ -2323,7 +2323,7 @@ CONCLUSION:
             // Classification breakdown table if data available
             // Aggregate by Classification + Reason (sum across severity levels)
             let breakdownHTML = '';
-            if (classificationData.length > 0 && classificationData.some(d => d.reason)) {
+            if (classificationData.length > 0 && classificationData.some(d => d.reason || d.severity)) {
                 const aggregated = {};
                 classificationData.forEach(row => {
                     const key = `${row.classification}|||${row.reason || ''}`;
@@ -2630,6 +2630,11 @@ CONCLUSION:
             document.getElementById('sevInfo').value = data.sevInfo || '';
             document.getElementById('csvInput').value = data.csvInput || '';
             document.getElementById('summaryNotes').value = data.summaryNotes || '';
+
+            // Re-parse CSV to repopulate classificationData (needed for report breakdown)
+            if (data.csvInput) {
+                parseCSVData();
+            }
 
             // Load escalations
             document.getElementById('escalationEntries').innerHTML = '';
