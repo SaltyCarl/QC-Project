@@ -2321,8 +2321,19 @@ CONCLUSION:
             ` : '';
 
             // Classification breakdown table if data available
+            // Aggregate by Classification + Reason (sum across severity levels)
             let breakdownHTML = '';
             if (classificationData.length > 0 && classificationData.some(d => d.reason)) {
+                const aggregated = {};
+                classificationData.forEach(row => {
+                    const key = `${row.classification}|||${row.reason || ''}`;
+                    if (!aggregated[key]) {
+                        aggregated[key] = { classification: row.classification, reason: row.reason, count: 0 };
+                    }
+                    aggregated[key].count += row.count;
+                });
+                const aggregatedRows = Object.values(aggregated);
+
                 breakdownHTML = `
                     <div class="classification-detail-section">
                         <h3 class="report-section-title">Classification Breakdown</h3>
@@ -2336,7 +2347,7 @@ CONCLUSION:
                                 </tr>
                             </thead>
                             <tbody>
-                                ${classificationData.map(row => `
+                                ${aggregatedRows.map(row => `
                                     <tr>
                                         <td><span class="status-badge status-${row.classification === 'TruePositive' ? 'tp' : row.classification === 'BenignPositive' ? 'bp' : row.classification === 'FalsePositive' ? 'fp' : 'ud'}">${row.classification || 'Undetermined'}</span></td>
                                         <td>${row.reason || '-'}</td>
