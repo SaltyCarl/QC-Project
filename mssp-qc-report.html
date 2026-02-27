@@ -757,6 +757,42 @@
             font-weight: 600;
         }
 
+        .metric-trend {
+            margin-top: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .metric-trend .trend-arrow { font-size: 0.65rem; }
+        .trend-up { color: #3b82f6; }
+        .trend-down { color: #8b5cf6; }
+        .trend-flat { color: #64748b; }
+
+        .trend-label {
+            font-size: 0.6rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 2px;
+            text-align: center;
+        }
+
+        .trend-notice {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 2px;
+            padding: 12px 20px;
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #0369a1;
+        }
+
         /* Section Headers */
         .report-section-title {
             color: #0f172a;
@@ -1237,7 +1273,7 @@
                 background: #fff;
             }
 
-            .input-section, .button-row, h1, .visibility-controls, .no-print {
+            .input-section, .button-row, h1, .visibility-controls, .no-print, .trend-notice {
                 display: none !important;
             }
 
@@ -2238,6 +2274,22 @@ CONCLUSION:
             const fpRate = totalCases > 0 ? ((classFP / totalCases) * 100).toFixed(2) : 0;
             const udRate = totalCases > 0 ? ((classUD / totalCases) * 100).toFixed(2) : 0;
 
+            // Trend analysis — get prior period data BEFORE archiving current
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const currentMetrics = { totalCases, totalEscalated, classTP, classBP, classFP, classUD, sevHigh, sevMedium, sevLow, sevInfo };
+            const trendData = getTrendData(clientName, currentMetrics, startDate, endDate);
+
+            const trendKeyMap = {
+                'Total Cases': 'totalCases',
+                'Escalated': 'totalEscalated',
+                'TruePositive': 'classTP',
+                'BenignPositive': 'classBP',
+                'FalsePositive': 'classFP',
+                'Undetermined': 'classUD',
+                'Unclassified': null
+            };
+
             // Sort and generate escalation cards
             const sortedEscalations = sortEscalations(escalations, currentEscSort);
             let escalationCards = '';
@@ -2373,11 +2425,24 @@ CONCLUSION:
                 { value: unclassified, label: 'Unclassified', percent: 'Not yet classified', class: '', style: 'background: #f8fafc;', valueStyle: 'font-size: 1.5rem; color: #475569;' }
             ].filter(m => m.value > 0);
 
+            // Attach trend indicators to each metric
+            metrics.forEach(m => {
+                const trendKey = trendKeyMap[m.label];
+                if (trendData && trendKey && trendData.metrics[trendKey]) {
+                    m.trendHTML = renderTrendIndicator(trendData.metrics[trendKey], trendData.periodLabel);
+                } else {
+                    m.trendHTML = '';
+                }
+            });
+
+            const trendNoticeHTML = !trendData ? '<div class="trend-notice no-print">Trend analysis will be available on the next report for this client.</div>' : '';
+
             const metricsHTML = metrics.map(m => `
                 <div class="metric-card ${m.class}" ${m.style ? `style="${m.style}"` : ''}>
                     <div class="metric-value" ${m.valueStyle ? `style="${m.valueStyle}"` : ''}>${m.value.toLocaleString()}</div>
                     <div class="metric-label">${m.label}</div>
                     ${m.percent ? `<div class="metric-percent">${m.percent}</div>` : ''}
+                    ${m.trendHTML || ''}
                 </div>
             `).join('');
 
@@ -2387,6 +2452,8 @@ CONCLUSION:
                     <div class="subtitle">${reportPeriod} &nbsp;|&nbsp; ${environment}</div>
                     <div class="client-name">${clientName}</div>
                 </div>
+
+                ${trendNoticeHTML}
 
                 <div class="metrics-grid dynamic" data-section="metrics">
                     ${metricsHTML}
@@ -2461,6 +2528,9 @@ CONCLUSION:
             document.getElementById('reportOutput').innerHTML = reportHTML;
             document.getElementById('reportSection').classList.add('visible');
             document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth' });
+
+            // Archive snapshot for future trend comparison
+            archiveReportSnapshot(clientName, currentMetrics, startDate, endDate);
         }
 
         function printReport() {
@@ -2609,6 +2679,143 @@ CONCLUSION:
                 return false;
             }
         }
+
+        // ==================== TREND ANALYSIS ====================
+        const HISTORY_KEY = 'mssp-qc-report-history';
+        const MAX_SNAPSHOTS = 12;
+
+        function archiveReportSnapshot(clientName, metrics, startDate, endDate) {
+            const key = clientName.trim().toLowerCase();
+            if (!key) return;
+
+            let history = {};
+            try { history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || {}; } catch (e) { history = {}; }
+
+            if (!history[key]) history[key] = [];
+
+            const now = new Date().toISOString();
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const periodDays = Math.max(1, Math.round((end - start) / 86400000) + 1);
+
+            const snapshot = {
+                generatedAt: now,
+                startDate: startDate,
+                endDate: endDate,
+                periodDays: periodDays,
+                metrics: {
+                    totalCases: metrics.totalCases,
+                    totalEscalated: metrics.totalEscalated,
+                    classTP: metrics.classTP,
+                    classBP: metrics.classBP,
+                    classFP: metrics.classFP,
+                    classUD: metrics.classUD,
+                    sevHigh: metrics.sevHigh,
+                    sevMedium: metrics.sevMedium,
+                    sevLow: metrics.sevLow,
+                    sevInfo: metrics.sevInfo
+                }
+            };
+
+            // Dedup: if most recent snapshot has same date range and was generated within 60s, overwrite
+            if (history[key].length > 0) {
+                const latest = history[key][0];
+                const timeDiff = new Date(now) - new Date(latest.generatedAt);
+                if (latest.startDate === startDate && latest.endDate === endDate && timeDiff < 60000) {
+                    history[key][0] = snapshot;
+                } else {
+                    history[key].unshift(snapshot);
+                }
+            } else {
+                history[key].unshift(snapshot);
+            }
+
+            // Cap at MAX_SNAPSHOTS
+            if (history[key].length > MAX_SNAPSHOTS) {
+                history[key] = history[key].slice(0, MAX_SNAPSHOTS);
+            }
+
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch (e) { console.error('Failed to archive snapshot:', e); }
+        }
+
+        function getTrendData(clientName, currentMetrics, startDate, endDate) {
+            const key = clientName.trim().toLowerCase();
+            if (!key) return null;
+
+            let history = {};
+            try { history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || {}; } catch (e) { return null; }
+
+            const snapshots = history[key];
+            if (!snapshots || snapshots.length === 0) return null;
+
+            // Find best match: most recent snapshot where endDate < currentStartDate (non-overlapping)
+            let match = null;
+            for (const snap of snapshots) {
+                if (snap.endDate < startDate) {
+                    match = snap;
+                    break;
+                }
+            }
+
+            // Fallback: most recent snapshot with different date range
+            if (!match) {
+                for (const snap of snapshots) {
+                    if (snap.startDate !== startDate || snap.endDate !== endDate) {
+                        match = snap;
+                        break;
+                    }
+                }
+            }
+
+            if (!match) return null;
+
+            const trendMetrics = {};
+            const metricKeys = ['totalCases', 'totalEscalated', 'classTP', 'classBP', 'classFP', 'classUD', 'sevHigh', 'sevMedium', 'sevLow', 'sevInfo'];
+
+            metricKeys.forEach(k => {
+                const prev = match.metrics[k] || 0;
+                const curr = currentMetrics[k] || 0;
+                const delta = curr - prev;
+                const pctChange = prev > 0 ? ((delta / prev) * 100) : (curr > 0 ? 100 : 0);
+                trendMetrics[k] = { prev, delta, pctChange };
+            });
+
+            return {
+                periodLabel: `vs prior ${match.periodDays}d`,
+                matchDate: match.endDate,
+                metrics: trendMetrics
+            };
+        }
+
+        function renderTrendIndicator(trendEntry, periodLabel) {
+            if (!trendEntry) return '';
+
+            const absPct = Math.abs(trendEntry.pctChange);
+            let arrow, cls;
+
+            if (absPct < 2) {
+                arrow = '&#8212;';
+                cls = 'trend-flat';
+            } else if (trendEntry.delta > 0) {
+                arrow = '&#9650;';
+                cls = 'trend-up';
+            } else {
+                arrow = '&#9660;';
+                cls = 'trend-down';
+            }
+
+            const sign = trendEntry.delta > 0 ? '+' : '';
+            const pctDisplay = absPct < 2 ? 'no change' : `${sign}${trendEntry.delta} (${sign}${trendEntry.pctChange.toFixed(0)}%)`;
+
+            return `
+                <div class="metric-trend ${cls}">
+                    <span class="trend-arrow">${arrow}</span>
+                    <span>${pctDisplay}</span>
+                </div>
+                <div class="trend-label">${periodLabel}</div>
+            `;
+        }
+        // ==================== END TREND ANALYSIS ====================
 
         function loadFormData(data) {
             if (!data) return false;
